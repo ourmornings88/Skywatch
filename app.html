@@ -12,89 +12,103 @@
 
 <style>
 :root {
-  --bg:#2f82e6; --card:rgba(255,255,255,0.18); --text:#fff;
+  --bg:#eaf4ff; --card:#fff; --text:#0f2a43; --sub:#5b7794;
   --accent:#2b8aef; --me:#2b8aef; --me-t:#fff;
   --them:#e7edf3; --them-t:#0f2a43;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  box-sizing:border-box;
 }
-html, body { height:100%; margin:0; }
-body { background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; overflow-x:hidden; transition: background 0.5s ease; }
-#app { max-width:480px; margin:0 auto; min-height:100%; display:flex; flex-direction:column; position:relative; }
+@media(prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0d1520;--card:#16202c;--text:#eaf2fb;--sub:#8fa3ba;
+    --them:#22303f;--them-t:#eaf2fb;
+  }
+}
+html,body{height:100%;margin:0;scroll-padding-top:env(safe-area-inset-top,0px);}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;overflow-x:hidden;}
+*{box-sizing:border-box;}
+#app{max-width:480px;margin:0 auto;min-height:100%;display:flex;flex-direction:column;position:relative;}
 
-#weather { padding:calc(env(safe-area-inset-top,0px) + 24px) 16px 40px; color:#fff; user-select:none; flex:1; text-shadow:0 1px 3px rgba(0,0,0,.15); }
-.wx-top { text-align:center; }
-.wx-city { font-size:26px; font-weight:500; cursor:default; display:inline-block; padding:6px 14px; }
-.wx-icon-el { font-size:54px; margin:8px 0; cursor:pointer; -webkit-touch-callout:none; }
-.wx-temp { font-size:88px; font-weight:200; line-height:1; margin:0; cursor:pointer; }
-.wx-cond { font-size:19px; opacity:.95; }
-.wx-hilo { font-size:16px; opacity:.9; margin-top:2px; white-space:pre; }
-.wc { background:var(--card); -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px); border-radius:18px; padding:14px 16px; margin-top:14px; }
-.wc h4 { margin:0 0 8px; font-size:12px; font-weight:600; opacity:.75; text-transform:uppercase; letter-spacing:.05em; }
-.hrs { display:flex; gap:18px; overflow-x:auto; padding-bottom:4px; scrollbar-width:none; }
-.hrs::-webkit-scrollbar { display:none; }
-.hr { display:flex; flex-direction:column; align-items:center; gap:6px; min-width:42px; font-size:15px; }
-.hr small { font-size:12px; opacity:.85; white-space:nowrap; }
-.dy { display:flex; align-items:center; gap:8px; padding:9px 0; border-top:1px solid rgba(255,255,255,.2); font-size:16px; }
-.dy:first-of-type { border-top:none; }
-.dy .d { width:52px; } .dy .i { width:30px; text-align:center; } .dy .l { width:34px; text-align:right; opacity:.7; } .dy .h { width:34px; }
-.bar { flex:1; height:5px; border-radius:3px; background:rgba(255,255,255,.25); position:relative; }
-.bar i { position:absolute; top:0; bottom:0; border-radius:3px; background:linear-gradient(90deg,#7fd1ff,#ffd36b); }
-.grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:14px; }
-.grid .wc { margin-top:0; }
-.grid b { font-size:22px; font-weight:300; display:block; }
-.wx-err { text-align:center; padding:20px 10px; opacity:.9; }
+/* Weather Screen */
+#wxBg{position:fixed;inset:0;z-index:-1;background:linear-gradient(#2f82e6,#7dbcf5);transition:background .5s;}
+#weather{padding:calc(env(safe-area-inset-top,0px) + 24px) 16px 90px;color:#fff;user-select:none;flex:1;text-shadow:0 1px 3px rgba(0,0,0,.15);}
+.wx-top{text-align:center;}
+.wx-city{font-size:26px;font-weight:500;cursor:default;display:inline-block;padding:6px 14px;}
+.wx-icon-el{font-size:54px;margin:8px 0;cursor:pointer;-webkit-touch-callout:none;}
+.wx-temp{font-size:88px;font-weight:200;line-height:1;margin:0;cursor:pointer;}
+.wx-cond{font-size:19px;opacity:.95;}
+.wx-hilo{font-size:16px;opacity:.9;margin-top:2px;white-space:pre;}
+.wc{background:rgba(255,255,255,.16);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-radius:18px;padding:12px 14px;margin-top:14px;}
+.wc h4{margin:0 0 8px;font-size:12px;font-weight:600;opacity:.75;text-transform:uppercase;letter-spacing:.05em;}
+.hrs{display:flex;gap:18px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none;}
+.hrs::-webkit-scrollbar{display:none;}
+.hr{display:flex;flex-direction:column;align-items:center;gap:6px;min-width:42px;font-size:15px;}
+.hr small{font-size:12px;opacity:.85;white-space:nowrap;}
+.dy{display:flex;align-items:center;gap:8px;padding:9px 0;border-top:1px solid rgba(255,255,255,.2);font-size:16px;}
+.dy:first-of-type{border-top:none;}
+.dy .d{width:52px;}.dy .i{width:30px;text-align:center;}.dy .l{width:34px;text-align:right;opacity:.7;}.dy .h{width:34px;}
+.bar{flex:1;height:5px;border-radius:3px;background:rgba(255,255,255,.25);position:relative;}
+.bar i{position:absolute;top:0;bottom:0;border-radius:3px;background:linear-gradient(90deg,#7fd1ff,#ffd36b);}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px;}
+.grid .wc{margin-top:0;}
+.grid b{font-size:26px;font-weight:300;display:block;}
+.wx-err{text-align:center;padding:20px 10px;opacity:.9;}
 
-#panicZone { position:fixed; bottom:0; right:0; width:80px; height:80px; z-index:30; -webkit-tap-highlight-color:transparent; }
+#panicZone{position:fixed;bottom:0;right:0;width:80px;height:80px;z-index:30;-webkit-tap-highlight-color:transparent;}
 
 /* Overlay Screens */
-#overlay { position:fixed; inset:0; background:#eaf4ff; color:#0f2a43; display:none; flex-direction:column; z-index:100; }
-#overlay.show { display:flex; }
+#overlay{position:fixed;inset:0;background:var(--bg);display:none;flex-direction:column;z-index:10;}
+#overlay.show{display:flex;}
 
-#pinScreen { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; padding:30px; }
-.pin-label { font-size:16px; font-weight:600; }
-.pin-dots { display:flex; gap:14px; }
-.pin-dot { width:14px; height:14px; border-radius:50%; border:2px solid #5b7794; background:transparent; }
-.pin-dot.filled { background:#2b8aef; border-color:#2b8aef; }
-.pin-error { color:#d9534f; font-size:13px; height:16px; text-align:center; }
-.keypad { display:grid; grid-template-columns:repeat(3,68px); gap:14px; }
-.keypad button { width:68px; height:68px; border-radius:50%; border:1px solid rgba(128,128,128,.25); background:#fff; color:#0f2a43; font-size:22px; cursor:pointer; }
-.keypad button:active { background:#2b8aef; color:#fff; }
-.btn-ghost { background:none; border:none; color:#5b7794; font-size:13px; cursor:pointer; padding:8px; }
+#pinScreen{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:30px;}
+.pin-label{font-size:16px;font-weight:600;}
+.pin-dots{display:flex;gap:14px;}
+.pin-dot{width:14px;height:14px;border-radius:50%;border:2px solid var(--sub);background:transparent;}
+.pin-dot.filled{background:var(--accent);border-color:var(--accent);}
+.pin-error{color:#d9534f;font-size:13px;height:16px;text-align:center;}
+.keypad{display:grid;grid-template-columns:repeat(3,68px);gap:14px;}
+.keypad button{width:68px;height:68px;border-radius:50%;border:1px solid rgba(128,128,128,.25);background:var(--card);color:var(--text);font-size:22px;cursor:pointer;}
+.keypad button:active{background:var(--accent);color:#fff;}
+.btn-ghost{background:none;border:none;color:var(--sub);font-size:13px;cursor:pointer;padding:8px;}
 
-#licenseScreen, #setupScreen { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; padding:30px; }
-.setup-title { font-size:17px; font-weight:600; }
-.hint { font-size:12px; color:#5b7794; text-align:center; max-width:260px; line-height:1.5; }
-#licenseInput, #roomInput { width:100%; max-width:260px; text-align:center; font-size:16px; padding:10px; border-radius:10px; border:1px solid rgba(128,128,128,.3); background:#fff; color:#0f2a43; outline:none; }
-.btn-primary { background:#2b8aef; color:#fff; border:none; border-radius:10px; padding:10px 22px; font-size:15px; cursor:pointer; font-weight:600; }
+#licenseScreen, #setupScreen{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:30px;}
+.setup-title{font-size:17px;font-weight:600;}
+.hint{font-size:12px;color:var(--sub);text-align:center;max-width:260px;line-height:1.5;}
+#licenseInput, #roomInput{width:100%;max-width:260px;text-align:center;font-size:16px;padding:10px;border-radius:10px;border:1px solid rgba(128,128,128,.3);background:var(--card);color:var(--text);}
+.btn-primary{background:var(--accent);color:#fff;border:none;border-radius:10px;padding:10px 22px;font-size:15px;cursor:pointer;}
 
-#chatScreen { flex:1; display:flex; flex-direction:column; background:#eaf4ff; }
-.chat-hdr { display:flex; align-items:center; gap:10px; padding:12px 16px; background:#fff; border-bottom:1px solid rgba(128,128,128,.15); }
-.chat-hdr .hbtn { background:none; border:none; color:#2b8aef; font-size:15px; cursor:pointer; }
-.chat-hdr .title { font-weight:600; flex:1; font-size:15px; color:#0f2a43; }
-.chat-hdr .clearbtn { font-size:13px; color:#c0392b; background:none; border:none; cursor:pointer; }
-#status { font-size:12px; color:#5b7794; text-align:center; padding:4px 16px; min-height:22px; }
-#messages { flex:1; overflow-y:auto; padding:12px 16px; display:flex; flex-direction:column; gap:8px; }
-.bubble { max-width:76%; padding:9px 13px; border-radius:16px; font-size:15px; line-height:1.4; word-wrap:break-word; }
-.me { align-self:flex-end; background:#2b8aef; color:#fff; border-bottom-right-radius:4px; }
-.them { align-self:flex-start; background:#e7edf3; color:#0f2a43; border-bottom-left-radius:4px; }
-.ts { font-size:10px; opacity:.55; margin-top:2px; display:block; }
-.chat-inp { display:flex; gap:8px; padding:10px; background:#fff; border-top:1px solid rgba(128,128,128,.15); }
-#msgInput { flex:1; border:1px solid rgba(128,128,128,.3); border-radius:20px; padding:9px 14px; font-size:15px; background:#eaf4ff; color:#0f2a43; outline:none; }
-#sendBtn { background:#2b8aef; color:#fff; border:none; border-radius:20px; padding:9px 16px; font-size:14px; cursor:pointer; font-weight:600; }
+#chatScreen{flex:1;display:flex;flex-direction:column;}
+.chat-hdr{display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--card);border-bottom:1px solid rgba(128,128,128,.15);}
+.chat-hdr .hbtn{background:none;border:none;color:var(--accent);font-size:15px;cursor:pointer;}
+.chat-hdr .title{font-weight:600;flex:1;font-size:15px;}
+.chat-hdr .clearbtn{font-size:13px;color:#c0392b;background:none;border:none;cursor:pointer;}
+#status{font-size:12px;color:var(--sub);text-align:center;padding:4px 16px;min-height:22px;}
+#messages{flex:1;overflow-y:auto;padding:12px 16px;display:flex;flex-direction:column;gap:8px;}
+.bubble{max-width:76%;padding:9px 13px;border-radius:16px;font-size:15px;line-height:1.4;word-wrap:break-word;}
+.me{align-self:flex-end;background:var(--me);color:var(--me-t);border-bottom-right-radius:4px;}
+.them{align-self:flex-start;background:var(--them);color:var(--them-t);border-bottom-left-radius:4px;}
+.ts{font-size:10px;opacity:.55;margin-top:2px;display:block;}
+.chat-inp{display:flex;gap:8px;padding:10px;background:var(--card);border-top:1px solid rgba(128,128,128,.15);}
+#msgInput{flex:1;border:1px solid rgba(128,128,128,.3);border-radius:20px;padding:9px 14px;font-size:15px;background:var(--bg);color:var(--text);}
+#sendBtn{background:var(--accent);color:#fff;border:none;border-radius:20px;padding:9px 16px;font-size:14px;cursor:pointer;}
 
-#galleryScreen { flex:1; display:flex; flex-direction:column; background:#fff; }
-.gal-hdr { display:flex; align-items:center; gap:10px; padding:14px 16px; background:#fff; border-bottom:1px solid rgba(128,128,128,.15); }
-.gal-grid { flex:1; overflow-y:auto; display:grid; grid-template-columns:repeat(3,1fr); gap:2px; padding:2px; }
-.gal-grid img { width:100%; aspect-ratio:1; object-fit:cover; cursor:pointer; }
-.gal-add { display:flex; align-items:center; justify-content:center; aspect-ratio:1; background:#e7edf3; color:#5b7794; font-size:30px; cursor:pointer; }
+#galleryScreen{flex:1;display:flex;flex-direction:column;}
+.gal-hdr{display:flex;align-items:center;gap:10px;padding:14px 16px;background:var(--card);border-bottom:1px solid rgba(128,128,128,.15);}
+.gal-hdr button{background:none;border:none;color:var(--accent);font-size:15px;cursor:pointer;}
+.gal-grid{flex:1;overflow-y:auto;display:grid;grid-template-columns:repeat(3,1fr);gap:2px;padding:2px;}
+.gal-grid img{width:100%;aspect-ratio:1;object-fit:cover;cursor:pointer;}
+.gal-add{display:flex;align-items:center;justify-content:center;aspect-ratio:1;background:var(--them);color:var(--sub);font-size:30px;cursor:pointer;}
 
-#lightbox { position:fixed; inset:0; background:rgba(0,0,0,.94); display:none; align-items:center; justify-content:center; flex-direction:column; gap:14px; z-index:200; }
-#lightbox.show { display:flex; }
-#lbImg { max-width:92%; max-height:78%; object-fit:contain; }
-.lb-close { position:absolute; top:16px; right:16px; color:#fff; font-size:26px; background:none; border:none; cursor:pointer; }
-.lb-del { color:#ff6b6b; background:rgba(255,255,255,.1); border:1px solid rgba(255,100,100,.3); border-radius:8px; padding:8px 20px; font-size:14px; cursor:pointer; }
+#lightbox{position:fixed;inset:0;background:rgba(0,0,0,.94);display:none;align-items:center;justify-content:center;flex-direction:column;gap:14px;z-index:20;}
+#lightbox.show{display:flex;}
+#lbImg{max-width:92%;max-height:78%;object-fit:contain;}
+.lb-close{position:absolute;top:16px;right:16px;color:#fff;font-size:26px;background:none;border:none;cursor:pointer;}
+.lb-del{color:#ff6b6b;background:rgba(255,255,255,.1);border:1px solid rgba(255,100,100,.3);border-radius:8px;padding:8px 20px;font-size:14px;cursor:pointer;}
 </style>
 </head>
 <body>
+<div id="wxBg"></div>
 <div id="app">
 
 <div id="weather">
@@ -116,7 +130,15 @@ body { background:var(--bg); color:var(--text); font-family:-apple-system,BlinkM
     <div class="dy"><span class="d">Today</span><span class="i">🌤️</span><span class="l">56°</span><div class="bar"><i style="left:10%;right:20%"></i></div><span class="h">79°</span></div>
     <div class="dy"><span class="d">Sun</span><span class="i">☀️</span><span class="l">54°</span><div class="bar"><i style="left:5%;right:25%"></i></div><span class="h">77°</span></div>
     <div class="dy"><span class="d">Mon</span><span class="i">⛅</span><span class="l">58°</span><div class="bar"><i style="left:15%;right:30%"></i></div><span class="h">74°</span></div>
+    <div class="dy"><span class="d">Tue</span><span class="i">🌧️</span><span class="l">60°</span><div class="bar"><i style="left:20%;right:40%"></i></div><span class="h">68°</span></div>
+    <div class="dy"><span class="d">Wed</span><span class="i">🌤️</span><span class="l">55°</span><div class="bar"><i style="left:8%;right:28%"></i></div><span class="h">72°</span></div>
   </div></div>
+  <div class="grid" id="wxGrid">
+    <div class="wc"><h4>Feels Like</h4><b id="wF">76°</b></div>
+    <div class="wc"><h4>Humidity</h4><b id="wH">45%</b></div>
+    <div class="wc"><h4>Wind</h4><b id="wW">6 mph</b></div>
+    <div class="wc"><h4>UV Index</h4><b id="wU">4</b></div>
+  </div>
   <div class="wx-err" id="wxErr"></div>
 </div>
 
@@ -261,6 +283,7 @@ renderDots();
 
 document.getElementById('panicZone').addEventListener('click', () => {
   overlay.classList.remove('show');
+  document.getElementById('lightbox').classList.remove('show');
   pinEntry = ''; renderDots();
 });
 
@@ -311,6 +334,21 @@ weatherArea.addEventListener('touchend', e => {
 });
 function startComboTimer() { clearTimeout(comboTimer); comboTimer = setTimeout(() => { resetCombo(); }, 4000); }
 
+let matrixStep = 0, matrixTimer = null;
+document.addEventListener('touchstart', e => {
+  const touch = e.touches[0];
+  const x = touch.clientX, y = touch.clientY;
+  const w = window.innerWidth, h = window.innerHeight;
+  const isTopLeft = x < 90 && y < 90;
+  const isBottomRight = x > w - 90 && y > h - 90;
+  const isTopRight = x > w - 90 && y < 90;
+  if(matrixStep === 0 && isTopLeft) { matrixStep = 1; startMatrixTimer(); }
+  else if(matrixStep === 1 && isBottomRight) { matrixStep = 2; startMatrixTimer(); }
+  else if(matrixStep === 2 && isTopRight) { resetMatrix(); openAppTrigger(); }
+  else { if(!isTopLeft) resetMatrix(); }
+}, {passive: true});
+function startMatrixTimer() { clearTimeout(matrixTimer); matrixTimer = setTimeout(() => { resetMatrix(); }, 3500); }
+
 let tempTaps = 0, tempTimer = null;
 document.getElementById('wxTemp').addEventListener('click', (e) => {
   e.stopPropagation();
@@ -318,6 +356,41 @@ document.getElementById('wxTemp').addEventListener('click', (e) => {
   clearTimeout(tempTimer);
   tempTimer = setTimeout(() => { tempTaps = 0; }, 1200);
 });
+
+let holdTimer = null;
+const iconEl = document.getElementById('wxIconEl');
+const startHold = () => { holdTimer = setTimeout(() => { openAppTrigger(); }, 2000); };
+const cancelHold = () => { clearTimeout(holdTimer); };
+iconEl.addEventListener('mousedown', startHold);
+iconEl.addEventListener('mouseup', cancelHold);
+iconEl.addEventListener('touchstart', startHold);
+iconEl.addEventListener('touchend', cancelHold);
+
+let lastMag = null, peakDelta = 0, GRAB_THRESHOLD = 26;
+function attachAccelerometer() {
+  window.addEventListener('devicemotion', e => {
+    const a = e.acceleration || e.accelerationIncludingGravity;
+    if (!a || a.x == null) return;
+    const mag = Math.sqrt((a.x || 0) ** 2 + (a.y || 0) ** 2 + (a.z || 0) ** 2);
+    if (lastMag !== null) {
+      const delta = Math.abs(mag - lastMag);
+      if (delta > peakDelta) peakDelta = delta;
+      if (delta > GRAB_THRESHOLD && overlay.classList.contains('show')) {
+        overlay.classList.remove('show');
+        document.getElementById('lightbox').classList.remove('show');
+        pinEntry = ''; renderDots();
+      }
+    }
+    lastMag = mag;
+  });
+}
+if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+  window.addEventListener('click', () => {
+    DeviceMotionEvent.requestPermission().then(s => { if (s === 'granted') attachAccelerometer(); }).catch(() => {});
+  }, { once: true });
+} else {
+  attachAccelerometer();
+}
 
 document.getElementById('cancelLicense').addEventListener('click', () => overlay.classList.remove('show'));
 document.getElementById('cancelSetup').addEventListener('click', () => overlay.classList.remove('show'));
@@ -377,6 +450,85 @@ async function sendMessage() {
   payload.ts = firebase.database.ServerValue.TIMESTAMP;
   firebase.database().ref('rooms/' + roomId + '/messages').push(payload);
 }
+
+document.getElementById('clearBtn').addEventListener('click', () => {
+  if(roomId) firebase.database().ref('rooms/' + roomId + '/messages').remove();
+  document.getElementById('messages').innerHTML = '';
+});
+
+let photos = [], lbId = null;
+function loadPhotos() { try { photos = JSON.parse(localStorage.getItem(GALLERY_KEY) || '[]'); } catch { photos = []; } }
+function savePhotos() { try { localStorage.setItem(GALLERY_KEY, JSON.stringify(photos)); } catch {} }
+function renderGallery() {
+  loadPhotos();
+  let grid = document.getElementById('galleryGrid');
+  grid.querySelectorAll('img').forEach(n => n.remove());
+  let add = document.getElementById('galleryAdd');
+  photos.forEach(p => {
+    let img = document.createElement('img'); img.src = p.src;
+    img.addEventListener('click', () => { lbId = p.id; document.getElementById('lbImg').src = p.src; document.getElementById('lightbox').classList.add('show'); });
+    grid.insertBefore(img, add);
+  });
+}
+document.getElementById('galleryAdd').addEventListener('click', () => document.getElementById('galleryFile').click());
+document.getElementById('galleryFile').addEventListener('change', e => {
+  Array.from(e.target.files).forEach(f => {
+    let reader = new FileReader();
+    reader.onload = ev => {
+      photos.push({ id: Math.random(), src: ev.target.result });
+      savePhotos(); renderGallery();
+    };
+    reader.readAsDataURL(f);
+  });
+});
+document.getElementById('lbClose').addEventListener('click', () => document.getElementById('lightbox').classList.remove('show'));
+document.getElementById('lbDelete').addEventListener('click', () => {
+  photos = photos.filter(p => p.id !== lbId);
+  savePhotos(); document.getElementById('lightbox').classList.remove('show'); renderGallery();
+});
+
+const WC=[[[0],'☀️','🌙','Clear'],[[1],'🌤️','🌙','Mostly Clear'],[[2],'⛅','☁️','Partly Cloudy'],[[3],'☁️','☁️','Overcast'],[[45,48],'🌫️','🌫️','Fog'],[[51,53,55,56,57],'🌦️','🌧️','Drizzle'],[[61,63,65,66,67,80,81,82],'🌧️','🌧️','Rain'],[[71,73,75,77,85,86],'🌨️','🌨️','Snow'],[[95,96,99],'⛈️','⛈️','Thunderstorms']];
+const wxInfo=(c,d)=>{const r=WC.find(x=>x[0].includes(c))||WC[2];return [d?r[1]:r[2],r[3]];};
+const $=id=>document.getElementById(id), T=n=>Math.round(n)+'°';
+const hr12=s=>{const h=+s.slice(11,13);return (h%12||12)+(h<12?' AM':' PM');};
+const tm=s=>{const h=+s.slice(11,13);return (h%12||12)+':'+s.slice(14,16)+(h<12?' AM':' PM');};
+
+async function getLoc(){
+  try{const c=JSON.parse(localStorage.getItem('_sw_loc'));if(c&&Date.now()-c.t<864e5)return c;}catch{}
+  const pos=await new Promise(r=>navigator.geolocation?navigator.geolocation.getCurrentPosition(p=>r(p.coords),()=>r(null),{timeout:8000}):r(null));
+  let loc;
+  if(pos){
+    let name='My Location';
+    try{const g=await (await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${pos.latitude}&longitude=${pos.longitude}&localityLanguage=en`)).json();name=g.city||g.locality||name;}catch{}
+    loc={lat:pos.latitude,lon:pos.longitude,name};
+  }else{
+    const g=(await (await fetch('https://geocoding-api.open-meteo.com/v1/search?name=Sullivan&count=1')).json()).results[0];
+    loc={lat:g.latitude,lon:g.longitude,name:g.name};
+  }
+  loc.t=Date.now();
+  try{localStorage.setItem('_sw_loc',JSON.stringify(loc));}catch{}
+  return loc;
+}
+
+async function loadWeather(){
+  try{
+    const L=await getLoc();
+    const u=`https://api.open-meteo.com/v1/forecast?latitude=${L.lat}&longitude=${L.lon}&current=temperature_2m,apparent_temperature,relative_humidity_2m,is_day,weather_code,wind_speed_10m,surface_pressure&hourly=temperature_2m,weather_code,is_day,uv_index,visibility&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=auto&forecast_days=10`;
+    const w=await (await fetch(u)).json(), c=w.current, h=w.hourly, d=w.daily;
+    $('wxCity').textContent=L.name; $('wxTemp').textContent=T(c.temperature_2m);
+    $('wxCond').textContent=wxInfo(c.weather_code,c.is_day)[1];
+    $('wxHilo').textContent=`H:${T(d.temperature_2m_max[0])}  L:${T(d.temperature_2m_min[0])}`;
+    const now=c.time.slice(0,13); let i=h.time.findIndex(t=>t.slice(0,13)>=now); if(i<0)i=0;
+    $('wxHrs').innerHTML=h.time.slice(i,i+24).map((t,k)=>{const j=i+k;return `<div class="hr"><small>${k?hr12(t):'Now'}</small><span style="font-size:24px">${wxInfo(h.weather_code[j],h.is_day[j])[0]}</span><span>${T(k?h.temperature_2m[j]:c.temperature_2m)}</span></div>`;}).join('');
+    const mn=Math.min(...d.temperature_2m_min), mx=Math.max(...d.temperature_2m_max), rg=(mx-mn)||1;
+    $('wxDays').innerHTML=d.time.map((t,k)=>{const lo=d.temperature_2m_min[k],hi=d.temperature_2m_max[k];return `<div class="dy"><span class="d">${k?new Date(t+'T12:00').toLocaleDateString(undefined,{weekday:'short'}):'Today'}</span><span class="i">${wxInfo(d.weather_code[k],1)[0]}</span><span class="l">${T(lo)}</span><div class="bar"><i style="left:${(lo-mn)/rg*100}%;right:${100-(hi-mn)/rg*100}%"></i></div><span class="h">${T(hi)}</span></div>`;}).join('');
+    const G=[['Feels Like',T(c.apparent_temperature)],['Humidity',Math.round(c.relative_humidity_2m)+'%'],['Wind',Math.round(c.wind_speed_10m)+' mph'],['UV Index',Math.round(h.uv_index[i]||0)],['Sunrise',tm(d.sunrise[0])],['Sunset',tm(d.sunset[0])],['Pressure',(c.surface_pressure*0.02953).toFixed(2)+' inHg'],['Visibility',Math.min(10,Math.round((h.visibility[i]||16093)/1609))+' mi']];
+    $('wxGrid').innerHTML=G.map(g=>`<div class="wc"><h4>${g[0]}</h4><b>${g[1]}</b></div>`).join('');
+  }catch(e){
+    $('wxErr').textContent='Unable to load weather.';
+  }
+}
+loadWeather();
 </script>
 </body>
 </html>
