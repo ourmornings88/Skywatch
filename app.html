@@ -3,41 +3,268 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>SkyWatch</title>
-
-<!-- Firebase SDK -->
+<title>SkyWatch Weather</title>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
-
 <style>
-:root {
-  --bg:#eaf4ff; --card:#fff; --text:#0f2a43; --sub:#5b7794;
-  --accent:#2b8aef; --me:#2b8aef; --me-t:#fff;
-  --them:#e7edf3; --them-t:#0f2a43;
-  padding-top:env(safe-area-inset-top,0px);
-  padding-bottom:env(safe-area-inset-bottom,0px);
-  box-sizing:border-box;
+:root { --bg:#2f82e6; --card:rgba(255,255,255,0.18); --text:#fff; }
+body { margin:0; background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; height:100vh; overflow-x:hidden; }
+#weather { padding:24px 16px; max-width:480px; margin:0 auto; user-select:none; }
+.wx-top { text-align:center; margin-top:20px; }
+.wx-city { font-size:24px; font-weight:500; }
+.wx-temp { font-size:80px; font-weight:200; margin:10px 0; }
+.wx-cond { font-size:18px; opacity:0.9; }
+.card { background:var(--card); backdrop-filter:blur(10px); border-radius:16px; padding:16px; margin-top:20px; }
+.card h4 { margin:0 0 10px; font-size:12px; text-transform:uppercase; letter-spacing:1px; opacity:0.7; }
+.row { display:flex; justify-content:space-between; padding:8px 0; border-top:1px solid rgba(255,255,255,0.15); font-size:15px; }
+.row:first-child { border-top:none; }
+
+/* Overlay & Secure Screens */
+#overlay { position:fixed; inset:0; background:#eaf4ff; color:#0f2a43; display:none; flex-direction:column; z-index:100; }
+#overlay.show { display:flex; }
+#pinScreen { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; padding:30px; }
+.pin-dots { display:flex; gap:14px; }
+.pin-dot { width:14px; height:14px; border-radius:50%; border:2px solid #5b7794; background:transparent; }
+.pin-dot.filled { background:#2b8aef; border-color:#2b8aef; }
+.keypad { display:grid; grid-template-columns:repeat(3,68px); gap:14px; }
+.keypad button { width:68px; height:68px; border-radius:50%; border:1px solid rgba(128,128,128,0.25); background:#fff; color:#0f2a43; font-size:22px; cursor:pointer; }
+.keypad button:active { background:#2b8aef; color:#fff; }
+.btn-ghost { background:none; border:none; color:#5b7794; font-size:13px; cursor:pointer; padding:8px; }
+
+/* Chat Screen */
+#chatScreen { flex:1; display:flex; flex-direction:column; height:100%; }
+.chat-hdr { display:flex; align-items:center; gap:10px; padding:16px; background:#fff; border-bottom:1px solid rgba(0,0,0,0.1); font-weight:600; }
+#messages { flex:1; overflow-y:auto; padding:16px; display:flex; flex-direction:column; gap:8px; }
+.bubble { max-width:76%; padding:10px 14px; border-radius:16px; font-size:15px; word-wrap:break-word; }
+.me { align-self:flex-end; background:#2b8aef; color:#fff; border-bottom-right-radius:4px; }
+.them { align-self:flex-start; background:#e7edf3; color:#0f2a43; border-bottom-left-radius:4px; }
+.chat-inp { display:flex; gap:8px; padding:12px; background:#fff; border-top:1px solid rgba(0,0,0,0.1); }
+#msgInput { flex:1; border:1px solid rgba(0,0,0,0.2); border-radius:20px; padding:10px 14px; font-size:15px; outline:none; }
+#sendBtn { background:#2b8aef; color:#fff; border:none; border-radius:20px; padding:10px 20px; font-weight:600; cursor:pointer; }
+#setupScreen, #licenseScreen, #galleryScreen { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; padding:30px; }
+input { padding:12px; font-size:16px; border-radius:8px; border:1px solid #ccc; width:100%; max-width:280px; text-align:center; }
+.btn-primary { background:#2b8aef; color:#fff; border:none; border-radius:8px; padding:12px 24px; font-size:16px; font-weight:600; cursor:pointer; }
+</style>
+</head>
+<body>
+
+<div id="weather">
+  <div class="wx-top">
+    <div class="wx-city" id="wxCity">Sullivan</div>
+    <div class="wx-temp" id="wxTemp">76°</div>
+    <div class="wx-cond" id="wxCond">Mostly Sunny</div>
+  </div>
+  <div class="card">
+    <h4>Hourly Forecast</h4>
+    <div class="row"><span>Now</span><span>🌤️</span><span>76°</span></div>
+    <div class="row"><span>2 PM</span><span>☀️</span><span>78°</span></div>
+    <div class="row"><span>3 PM</span><span>☀️</span><span>79°</span></div>
+  </div>
+</div>
+
+<div id="overlay">
+  <div id="pinScreen">
+    <div style="font-weight:600; font-size:16px;">Enter code</div>
+    <div class="pin-dots" id="pinDots"></div>
+    <div id="pinError" style="color:red; height:15px; font-size:13px;"></div>
+    <div class="keypad" id="keypad"></div>
+    <button class="btn-ghost" id="pinCancel">Back to weather</button>
+  </div>
+
+  <div id="licenseScreen" style="display:none;">
+    <div style="font-weight:600; font-size:17px;">Activate App</div>
+    <div style="font-size:13px; color:#5b7794; text-align:center;">Enter your license key from your purchase.</div>
+    <input id="licenseInput" placeholder="License Key">
+    <button class="btn-primary" id="activateBtn">Activate</button>
+    <button class="btn-ghost" id="cancelLicense">Back</button>
+  </div>
+
+  <div id="setupScreen" style="display:none;">
+    <div style="font-weight:600; font-size:17px;">Enter Secret Phrase</div>
+    <div style="font-size:13px; color:#5b7794; text-align:center;">Both people type the same phrase to connect.</div>
+    <input id="roomInput" placeholder="e.g. secret-phrase-xyz">
+    <button class="btn-primary" id="joinBtn">Join Chat</button>
+    <button class="btn-ghost" id="cancelSetup">Back</button>
+  </div>
+
+  <div id="chatScreen" style="display:none;">
+    <div class="chat-hdr">
+      <button class="btn-ghost" id="hideBtn" style="color:#2b8aef; font-size:15px;">‹ Hide</button>
+      <div style="flex:1;">Chat 🔒</div>
+      <button class="btn-ghost" id="clearBtn" style="color:red;">Clear</button>
+    </div>
+    <div id="messages"></div>
+    <div class="chat-inp">
+      <input id="msgInput" placeholder="Message…">
+      <button id="sendBtn">Send</button>
+    </div>
+  </div>
+
+  <div id="galleryScreen" style="display:none;">
+    <div class="chat-hdr"><button class="btn-ghost" id="galBack" style="color:#2b8aef;">‹ Back</button><div style="flex:1;">Photos</div></div>
+    <div style="flex:1; display:flex; align-items:center; justify-content:center; color:#5b7794;">No photos yet.</div>
+  </div>
+</div>
+
+<script>
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyBPxFR-_Nwh8KoM3HBTDOR8818uPfo79sY",
+  authDomain: "weather-2026-d5ed7.firebaseapp.com",
+  databaseURL: "https://weather-2026-d5ed7-default-rtdb.firebaseio.com",
+  projectId: "weather-2026-d5ed7",
+  storageBucket: "weather-2026-d5ed7.firebasestorage.app",
+  messagingSenderId: "714772362588",
+  appId: "1:714772362588:web:30c96298c7548f76d57d99"
+};
+const PIN_LEN = 4;
+let roomId = null, roomKey = null;
+let CID = localStorage.getItem('_sw_id') || Math.random().toString(36).slice(2);
+localStorage.setItem('_sw_id', CID);
+
+try {
+  firebase.initializeApp(FIREBASE_CONFIG);
+  firebase.auth().signInAnonymously().catch(() => {});
+} catch(e) {}
+
+const enc = new TextEncoder(), dec = new TextDecoder();
+const b64 = buf => btoa(String.fromCharCode(...new Uint8Array(buf)));
+const unb64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+const hex = buf => [...new Uint8Array(buf)].map(x => x.toString(16).padStart(2, '0')).join('');
+
+async function pbkdf2(secret, salt, iter, bits) {
+  const k = await crypto.subtle.importKey('raw', enc.encode(secret), 'PBKDF2', false, ['deriveBits']);
+  return crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: enc.encode(salt), iterations: iter }, k, bits);
 }
-@media(prefers-color-scheme:dark){
-  :root:not([data-theme="light"]){
-    --bg:#0d1520;--card:#16202c;--text:#eaf2fb;--sub:#8fa3ba;
-    --them:#22303f;--them-t:#eaf2fb;
+async function deriveRoom(phrase) {
+  const [idBits, keyBits] = await Promise.all([
+    pbkdf2(phrase, 'skywatch/room/v1', 100000, 128),
+    pbkdf2(phrase, 'skywatch/key/v1', 100000, 256)
+  ]);
+  return { roomId: hex(idBits), key: await crypto.subtle.importKey('raw', keyBits, 'AES-GCM', false, ['encrypt', 'decrypt']) };
+}
+async function encryptMsg(key, obj) {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, enc.encode(JSON.stringify(obj)));
+  return { c: b64(ct), iv: b64(iv) };
+}
+async function decryptMsg(key, m) {
+  return JSON.parse(dec.decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: unb64(m.iv) }, key, unb64(m.c))));
+}
+
+const overlay = document.getElementById('overlay');
+function showOnly(el) {
+  ['pinScreen', 'licenseScreen', 'setupScreen', 'chatScreen', 'galleryScreen'].forEach(id => {
+    document.getElementById(id).style.display = (id === el) ? 'flex' : 'none';
+  });
+}
+
+let pinEntry = '';
+function renderDots() {
+  const c = document.getElementById('pinDots'); c.innerHTML = '';
+  for(let i=0; i<PIN_LEN; i++) {
+    const d = document.createElement('div'); d.className = 'pin-dot' + (i < pinEntry.length ? ' filled' : '');
+    c.appendChild(d);
   }
 }
-html,body{height:100%;margin:0;scroll-padding-top:env(safe-area-inset-top,0px);}
-body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;overflow-x:hidden;}
-*{box-sizing:border-box;}
-#app{max-width:480px;margin:0 auto;min-height:100%;display:flex;flex-direction:column;position:relative;}
 
-/* Weather Screen */
-#wxBg{position:fixed;inset:0;z-index:-1;background:linear-gradient(#2f82e6,#7dbcf5);}
-#weather{padding:calc(env(safe-area-inset-top,0px) + 24px) 16px 90px;color:#fff;user-select:none;flex:1;text-shadow:0 1px 3px rgba(0,0,0,.15);}
-.wx-top{text-align:center;}
-.wx-city{font-size:26px;font-weight:500;cursor:default;display:inline-block;padding:6px 14px;}
-.wx-icon-el{font-size:54px;margin:8px 0;cursor:pointer;-webkit-touch-callout:none;}
-.wx-temp{font-size:88px;font-weight:200;line-height:1;margin:0;}
-.wx-cond{font-size:19px;opacity:.95;}
-.wx-hilo{font-size:16px;opacity:.9;margin-top:2px;white-space:pre;}
-.wc{background:rgba(255,255,255,.16);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-radius:18px;padding:12px 14px;margin-top:14px;}
-.wc h4{margin:0 0 8px;font-size:12px;font-weight:600;opacity:.75;t
+const kp = document.getElementById('keypad');
+['1','2','3','4','5','6','7','8','9','','0','⌫'].forEach(k => {
+  const b = document.createElement('button');
+  b.textContent = k;
+  if(!k) { b.style.visibility = 'hidden'; kp.appendChild(b); return; }
+  b.addEventListener('click', () => {
+    if(k === '⌫') { pinEntry = pinEntry.slice(0,-1); renderDots(); return; }
+    if(pinEntry.length < PIN_LEN) pinEntry += k;
+    renderDots();
+    if(pinEntry.length === PIN_LEN) setTimeout(verifyPin, 50);
+  });
+  kp.appendChild(b);
+});
+renderDots();
+
+function verifyPin() {
+  let entry = pinEntry; pinEntry = ''; renderDots();
+  if(entry === '2588') {
+    if(!localStorage.getItem('_sw_k')) showOnly('licenseScreen');
+    else showOnly('setupScreen');
+  } else if(entry === '6969') {
+    showOnly('galleryScreen');
+  } else {
+    document.getElementById('pinError').textContent = 'Wrong code';
+    setTimeout(() => document.getElementById('pinError').textContent = '', 800);
+  }
+}
+
+function openApp() { overlay.classList.add('show'); showOnly('pinScreen'); }
+
+// Universal unlock: Tap weather temp 5 times quickly
+let taps = 0, timer = null;
+document.getElementById('wxTemp').addEventListener('click', () => {
+  if(++taps >= 5) { taps = 0; openApp(); }
+  clearTimeout(timer);
+  timer = setTimeout(() => { taps = 0; }, 1200);
+});
+
+// Hide buttons
+['pinCancel', 'cancelLicense', 'cancelSetup', 'hideBtn', 'galBack'].forEach(id => {
+  document.getElementById(id).addEventListener('click', () => overlay.classList.remove('show'));
+});
+
+document.getElementById('activateBtn').addEventListener('click', () => {
+  let k = document.getElementById('licenseInput').value.trim();
+  if(k.length < 4) return alert('Enter key');
+  localStorage.setItem('_sw_k', k);
+  showOnly('setupScreen');
+});
+
+let unsub = null;
+document.getElementById('joinBtn').addEventListener('click', async () => {
+  let phrase = document.getElementById('roomInput').value.trim().toLowerCase();
+  if(phrase.length < 4) return alert('Phrase too short');
+  let r = await deriveRoom(phrase);
+  roomId = r.roomId; roomKey = r.key;
+  showOnly('chatScreen');
+  connectChat();
+});
+
+function connectChat() {
+  if(unsub) unsub();
+  let ref = firebase.database().ref('rooms/' + roomId + '/messages');
+  let q = ref.orderByChild('ts').limitToLast(50);
+  q.on('value', async snap => {
+    let el = document.getElementById('messages'); el.innerHTML = '';
+    snap.forEach(ch => {
+      let m = ch.val();
+      decryptMsg(roomKey, m).then(p => {
+        let b = document.createElement('div');
+        b.className = 'bubble ' + (p.s === CID ? 'me' : 'them');
+        b.textContent = p.t;
+        el.appendChild(b);
+        el.scrollTop = el.scrollHeight;
+      }).catch(() => {});
+    });
+  });
+  unsub = () => q.off();
+}
+
+document.getElementById('sendBtn').addEventListener('click', sendMsg);
+document.getElementById('msgInput').addEventListener('keydown', e => { if(e.key === 'Enter') sendMsg(); });
+
+async function sendMsg() {
+  let inp = document.getElementById('msgInput');
+  let t = inp.value.trim();
+  if(!t || !roomKey) return;
+  inp.value = '';
+  let p = await encryptMsg(roomKey, { t, s: CID });
+  p.ts = firebase.database.ServerValue.TIMESTAMP;
+  firebase.database().ref('rooms/' + roomId + '/messages').push(p);
+}
+
+document.getElementById('clearBtn').addEventListener('click', () => {
+  if(roomId) firebase.database().ref('rooms/' + roomId + '/messages').remove();
+  document.getElementById('messages').innerHTML = '';
+});
+</script>
+</body>
+</html>
