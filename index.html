@@ -2,523 +2,417 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>SkyWatch</title>
-
-<!-- Firebase SDK -->
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
-
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SkyWatch — Private Messaging, Hidden in Plain Sight</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
 :root {
-  --bg:#eaf4ff; --card:#fff; --text:#0f2a43; --sub:#5b7794;
-  --accent:#2b8aef; --me:#2b8aef; --me-t:#fff;
-  --them:#e7edf3; --them-t:#0f2a43;
-  padding-top:env(safe-area-inset-top,0px);
-  padding-bottom:env(safe-area-inset-bottom,0px);
-  box-sizing:border-box;
+  --navy: #070C18;
+  --navy2: #0D1526;
+  --navy3: #131D33;
+  --ice: #5BA4CF;
+  --ice-glow: rgba(91,164,207,.15);
+  --white: #EDF2FA;
+  --muted: #6B83A3;
+  --border: rgba(91,164,207,.18);
+  --font: 'Space Grotesk', system-ui, sans-serif;
 }
-@media(prefers-color-scheme:dark){
-  :root:not([data-theme="light"]){
-    --bg:#0d1520;--card:#16202c;--text:#eaf2fb;--sub:#8fa3ba;
-    --them:#22303f;--them-t:#eaf2fb;
-  }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--navy);
+  color: var(--white);
+  font-family: var(--font);
+  font-size: 16px;
+  line-height: 1.6;
+  overflow-x: hidden;
 }
-html,body{height:100%;margin:0;scroll-padding-top:env(safe-area-inset-top,0px);}
-body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;overflow-x:hidden;}
-*{box-sizing:border-box;}
-#app{max-width:480px;margin:0 auto;min-height:100%;display:flex;flex-direction:column;position:relative;}
 
-/* Weather Screen */
-#wxBg{position:fixed;inset:0;z-index:-1;background:linear-gradient(#2f82e6,#7dbcf5);}
-#weather{padding:calc(env(safe-area-inset-top,0px) + 24px) 16px 90px;color:#fff;user-select:none;flex:1;text-shadow:0 1px 3px rgba(0,0,0,.15);}
-.wx-top{text-align:center;}
-.wx-city{font-size:26px;font-weight:500;cursor:default;display:inline-block;padding:6px 14px;}
-.wx-icon-el{font-size:54px;margin:8px 0;cursor:pointer;-webkit-touch-callout:none;}
-.wx-temp{font-size:88px;font-weight:200;line-height:1;margin:0;}
-.wx-cond{font-size:19px;opacity:.95;}
-.wx-hilo{font-size:16px;opacity:.9;margin-top:2px;white-space:pre;}
-.wc{background:rgba(255,255,255,.16);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-radius:18px;padding:12px 14px;margin-top:14px;}
-.wc h4{margin:0 0 8px;font-size:12px;font-weight:600;opacity:.75;text-transform:uppercase;letter-spacing:.05em;}
-.hrs{display:flex;gap:18px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none;}
-.hrs::-webkit-scrollbar{display:none;}
-.hr{display:flex;flex-direction:column;align-items:center;gap:6px;min-width:42px;font-size:15px;}
-.hr small{font-size:12px;opacity:.85;white-space:nowrap;}
-.dy{display:flex;align-items:center;gap:8px;padding:9px 0;border-top:1px solid rgba(255,255,255,.2);font-size:16px;}
-.dy:first-of-type{border-top:none;}
-.dy .d{width:52px;}.dy .i{width:30px;text-align:center;}.dy .l{width:34px;text-align:right;opacity:.7;}.dy .h{width:34px;}
-.bar{flex:1;height:5px;border-radius:3px;background:rgba(255,255,255,.25);position:relative;}
-.bar i{position:absolute;top:0;bottom:0;border-radius:3px;background:linear-gradient(90deg,#7fd1ff,#ffd36b);}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px;}
-.grid .wc{margin-top:0;}
-.grid b{font-size:26px;font-weight:300;display:block;}
-.wx-err{text-align:center;padding:20px 10px;opacity:.9;}
+/* Nav */
+nav {
+  padding: 20px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  background: rgba(7,12,24,.92);
+  backdrop-filter: blur(12px);
+  z-index: 10;
+}
+.nav-logo { font-weight: 600; font-size: 18px; letter-spacing: -.02em; }
+.nav-logo span { color: var(--ice); }
+.nav-cta {
+  background: var(--ice);
+  color: var(--navy);
+  border: none;
+  padding: 8px 18px;
+  border-radius: 6px;
+  font-family: var(--font);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  transition: opacity .2s;
+}
+.nav-cta:hover { opacity: .9; }
 
-#panicZone{position:fixed;bottom:0;right:0;width:80px;height:80px;z-index:30;-webkit-tap-highlight-color:transparent;}
+/* Hero */
+.hero {
+  padding: 90px 24px 64px;
+  max-width: 680px;
+  margin: 0 auto;
+  text-align: center;
+}
+.hero-eyebrow {
+  font-size: 13px;
+  color: var(--ice);
+  font-weight: 500;
+  margin-bottom: 20px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.hero h1 {
+  font-size: clamp(38px, 8vw, 60px);
+  font-weight: 700;
+  line-height: 1.08;
+  letter-spacing: -.03em;
+  margin-bottom: 24px;
+}
+.hero h1 em {
+  font-style: normal;
+  color: var(--ice);
+}
+.hero-sub {
+  font-size: 18px;
+  color: var(--muted);
+  max-width: 520px;
+  margin: 0 auto 40px;
+  line-height: 1.6;
+}
+.hero-actions { display: flex; align-items: center; justify-content: center; gap: 20px; flex-wrap: wrap; }
+.btn-main {
+  background: var(--ice);
+  color: var(--navy);
+  border: none;
+  padding: 15px 32px;
+  border-radius: 8px;
+  font-family: var(--font);
+  font-size: 17px;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+  box-shadow: 0 0 40px var(--ice-glow);
+  transition: transform .1s, opacity .2s;
+}
+.btn-main:hover { opacity: .9; transform: translateY(-1px); }
+.hero-price { color: var(--muted); font-size: 14px; width: 100%; margin-top: 4px; }
+.hero-price strong { color: var(--white); }
 
-/* Overlay Screens */
-#overlay{position:fixed;inset:0;background:var(--bg);display:none;flex-direction:column;z-index:10;}
-#overlay.show{display:flex;}
+/* Phone Demo */
+.demo-wrap {
+  padding: 40px 24px 70px;
+  display: flex;
+  justify-content: center;
+}
+.phone {
+  width: 230px;
+  height: 440px;
+  background: #0f1824;
+  border-radius: 36px;
+  border: 2px solid var(--border);
+  overflow: hidden;
+  position: relative;
+  box-shadow: 0 40px 80px rgba(0,0,0,.6), 0 0 60px var(--ice-glow);
+}
+.phone-screen {
+  position: absolute;
+  inset: 0;
+  transition: opacity .6s ease;
+}
 
-#pinScreen{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:30px;}
-.pin-label{font-size:16px;font-weight:600;}
-.pin-dots{display:flex;gap:14px;}
-.pin-dot{width:14px;height:14px;border-radius:50%;border:2px solid var(--sub);background:transparent;}
-.pin-dot.filled{background:var(--accent);border-color:var(--accent);}
-.pin-error{color:#d9534f;font-size:13px;height:16px;text-align:center;}
-.keypad{display:grid;grid-template-columns:repeat(3,68px);gap:14px;}
-.keypad button{width:68px;height:68px;border-radius:50%;border:1px solid rgba(128,128,128,.25);background:var(--card);color:var(--text);font-size:22px;cursor:pointer;}
-.keypad button:active{background:var(--accent);color:#fff;}
-.btn-ghost{background:none;border:none;color:var(--sub);font-size:13px;cursor:pointer;padding:8px;}
+.wx-screen {
+  background: linear-gradient(160deg, #2f82e6 0%, #1a5ab8 100%);
+  padding: 28px 16px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: #fff;
+}
+.wx-city { font-size: 14px; font-weight: 500; margin-bottom: 2px; }
+.wx-temp-s { font-size: 58px; font-weight: 200; line-height: 1; margin: 4px 0; }
+.wx-cond-s { font-size: 13px; opacity: .9; }
+.wx-hilo-s { font-size: 12px; opacity: .8; margin-top: 2px; }
+.wx-card-s {
+  background: rgba(255,255,255,.18);
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin-top: 16px;
+  width: 100%;
+}
+.wx-row-s {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  opacity: .9;
+  padding: 3px 0;
+  border-top: 1px solid rgba(255,255,255,.15);
+}
+.wx-row-s:first-child { border-top: none; }
 
-#licenseScreen, #setupScreen{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:30px;}
-.setup-title{font-size:17px;font-weight:600;}
-.hint{font-size:12px;color:var(--sub);text-align:center;max-width:260px;line-height:1.5;}
-#licenseInput, #roomInput{width:100%;max-width:260px;text-align:center;font-size:16px;padding:10px;border-radius:10px;border:1px solid rgba(128,128,128,.3);background:var(--card);color:var(--text);}
-.btn-primary{background:var(--accent);color:#fff;border:none;border-radius:10px;padding:10px 22px;font-size:15px;cursor:pointer;}
+.chat-screen {
+  background: #0d1520;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  opacity: 0;
+}
+.chat-hdr-s {
+  background: #16202c;
+  padding: 24px 14px 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #eaf2fb;
+  border-bottom: 1px solid rgba(128,128,128,.15);
+}
+.chat-hdr-sub { font-size: 10px; color: #8fa3ba; font-weight: 400; margin-top: 1px; }
+.chat-msgs { flex: 1; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+.bubble-s {
+  padding: 7px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  line-height: 1.4;
+  max-width: 78%;
+}
+.bubble-me { background: #2b8aef; color: #fff; align-self: flex-end; border-bottom-right-radius: 3px; }
+.bubble-them { background: #22303f; color: #eaf2fb; align-self: flex-start; border-bottom-left-radius: 3px; }
+.chat-inp-s {
+  padding: 8px 10px;
+  background: #16202c;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  border-top: 1px solid rgba(128,128,128,.15);
+}
+.inp-fake { flex: 1; background: rgba(128,128,128,.15); border-radius: 14px; height: 26px; }
+.inp-send { width: 26px; height: 26px; background: #2b8aef; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #fff; }
 
-#chatScreen{flex:1;display:flex;flex-direction:column;}
-.chat-hdr{display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--card);border-bottom:1px solid rgba(128,128,128,.15);}
-.chat-hdr .hbtn{background:none;border:none;color:var(--accent);font-size:15px;cursor:pointer;}
-.chat-hdr .title{font-weight:600;flex:1;font-size:15px;}
-.chat-hdr .clearbtn{font-size:13px;color:#c0392b;background:none;border:none;cursor:pointer;}
-#status{font-size:12px;color:var(--sub);text-align:center;padding:4px 16px;min-height:22px;}
-#messages{flex:1;overflow-y:auto;padding:12px 16px;display:flex;flex-direction:column;gap:8px;}
-.bubble{max-width:76%;padding:9px 13px;border-radius:16px;font-size:15px;line-height:1.4;word-wrap:break-word;}
-.me{align-self:flex-end;background:var(--me);color:var(--me-t);border-bottom-right-radius:4px;}
-.them{align-self:flex-start;background:var(--them);color:var(--them-t);border-bottom-left-radius:4px;}
-.ts{font-size:10px;opacity:.55;margin-top:2px;display:block;}
-.chat-inp{display:flex;gap:8px;padding:10px;background:var(--card);border-top:1px solid rgba(128,128,128,.15);}
-#msgInput{flex:1;border:1px solid rgba(128,128,128,.3);border-radius:20px;padding:9px 14px;font-size:15px;background:var(--bg);color:var(--text);}
-#sendBtn{background:var(--accent);color:#fff;border:none;border-radius:20px;padding:9px 16px;font-size:14px;cursor:pointer;}
+@keyframes revealChat { 0%, 40% { opacity: 1; } 50%, 100% { opacity: 0; } }
+@keyframes showChat { 0%, 40% { opacity: 0; } 50%, 100% { opacity: 1; } }
+.wx-screen { animation: revealChat 5s ease-in-out infinite; }
+.chat-screen { animation: showChat 5s ease-in-out infinite; }
 
-#galleryScreen{flex:1;display:flex;flex-direction:column;}
-.gal-hdr{display:flex;align-items:center;gap:10px;padding:14px 16px;background:var(--card);border-bottom:1px solid rgba(128,128,128,.15);}
-.gal-hdr button{background:none;border:none;color:var(--accent);font-size:15px;cursor:pointer;}
-.gal-grid{flex:1;overflow-y:auto;display:grid;grid-template-columns:repeat(3,1fr);gap:2px;padding:2px;}
-.gal-grid img{width:100%;aspect-ratio:1;object-fit:cover;cursor:pointer;}
-.gal-add{display:flex;align-items:center;justify-content:center;aspect-ratio:1;background:var(--them);color:var(--sub);font-size:30px;cursor:pointer;}
+.demo-label { text-align: center; margin-top: 18px; font-size: 13px; color: var(--muted); }
 
-#lightbox{position:fixed;inset:0;background:rgba(0,0,0,.94);display:none;align-items:center;justify-content:center;flex-direction:column;gap:14px;z-index:20;}
-#lightbox.show{display:flex;}
-#lbImg{max-width:92%;max-height:78%;object-fit:contain;}
-.lb-close{position:absolute;top:16px;right:16px;color:#fff;font-size:26px;background:none;border:none;cursor:pointer;}
-.lb-del{color:#ff6b6b;background:rgba(255,255,255,.1);border:1px solid rgba(255,100,100,.3);border-radius:8px;padding:8px 20px;font-size:14px;cursor:pointer;}
+/* Sections */
+.features, .how, .pricing, .faq {
+  padding: 80px 24px;
+  max-width: 680px;
+  margin: 0 auto;
+}
+.section-label { font-size: 13px; color: var(--ice); font-weight: 500; margin-bottom: 12px; text-transform: uppercase; letter-spacing: .05em; }
+h2 { font-size: clamp(28px, 5vw, 38px); font-weight: 700; letter-spacing: -.02em; line-height: 1.2; margin-bottom: 40px; }
+
+.feat-list { display: flex; flex-direction: column; }
+.feat-item { display: flex; gap: 20px; padding: 24px 0; border-top: 1px solid var(--border); align-items: flex-start; }
+.feat-item:last-child { border-bottom: 1px solid var(--border); }
+.feat-icon { font-size: 24px; min-width: 36px; padding-top: 2px; }
+.feat-body h3 { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+.feat-body p { font-size: 14px; color: var(--muted); line-height: 1.55; }
+
+.how { background: var(--navy2); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); max-width: 100%; }
+.how-inner { max-width: 680px; margin: 0 auto; }
+.steps { display: flex; flex-direction: column; gap: 28px; }
+.step { display: flex; gap: 20px; align-items: flex-start; }
+.step-num { min-width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--ice); color: var(--ice); font-size: 13px; font-weight: 600; display: flex; align-items: center; justify-content: center; }
+.step-body h3 { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+.step-body p { font-size: 14px; color: var(--muted); line-height: 1.55; }
+
+.pricing { background: var(--navy2); border-top: 1px solid var(--border); max-width: 100%; }
+.pricing-inner { max-width: 460px; margin: 0 auto; }
+.price-card { background: var(--navy3); border: 1px solid var(--ice); border-radius: 16px; padding: 36px 28px; box-shadow: 0 0 60px var(--ice-glow); }
+.price-tag { font-size: 52px; font-weight: 700; letter-spacing: -.03em; line-height: 1; margin-bottom: 4px; }
+.price-tag sup { font-size: 22px; vertical-align: super; }
+.price-note { font-size: 13px; color: var(--muted); margin-bottom: 24px; }
+.price-includes { margin-bottom: 28px; display: flex; flex-direction: column; gap: 10px; }
+.price-line { display: flex; align-items: center; gap: 10px; font-size: 14px; }
+.price-line::before { content: '✓'; color: var(--ice); font-weight: 700; }
+.btn-buy { display: block; width: 100%; background: var(--ice); color: var(--navy); border: none; padding: 15px; border-radius: 8px; font-family: var(--font); font-size: 16px; font-weight: 700; cursor: pointer; text-align: center; text-decoration: none; }
+.btn-buy:hover { opacity: .9; }
+.price-sub { font-size: 12px; color: var(--muted); text-align: center; margin-top: 14px; }
+
+.faq-list { display: flex; flex-direction: column; }
+.faq-item { padding: 20px 0; border-top: 1px solid var(--border); }
+.faq-item:last-child { border-bottom: 1px solid var(--border); }
+.faq-q { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+.faq-a { font-size: 14px; color: var(--muted); line-height: 1.6; }
+
+footer { padding: 32px 24px; border-top: 1px solid var(--border); text-align: center; font-size: 13px; color: var(--muted); }
 </style>
 </head>
 <body>
-<div id="wxBg"></div>
-<div id="app">
 
-<div id="weather">
-  <div class="wx-top">
-    <div class="wx-city" id="wxCity">Loading…</div>
-    <div class="wx-icon-el" id="wxIconEl">🌤️</div>
-    <div class="wx-temp" id="wxTemp">--°</div>
-    <div class="wx-cond" id="wxCond"></div>
-    <div class="wx-hilo" id="wxHilo"></div>
+<nav>
+  <div class="nav-logo">Sky<span>Watch</span></div>
+  <a href="#pricing" class="nav-cta">Get Access</a>
+</nav>
+
+<section class="hero">
+  <div class="hero-eyebrow">Private messaging, hidden in plain sight</div>
+  <h1>Nobody will know<br>you're <em>even talking</em></h1>
+  <p class="hero-sub">SkyWatch looks like a weather app. It works like a weather app. And when you unlock it — it's an end-to-end encrypted private chat between two phones.</p>
+  <div class="hero-actions">
+    <a href="https://payhip.com/skywatch88" class="btn-main">Get SkyWatch for $9.99</a>
+    <div class="hero-price">One-time payment. <strong>No subscription.</strong></div>
   </div>
-  <div class="wc"><h4>Hourly Forecast</h4><div class="hrs" id="wxHrs"></div></div>
-  <div class="wc"><h4>10-Day Forecast</h4><div id="wxDays"></div></div>
-  <div class="grid" id="wxGrid"></div>
-  <div class="wx-err" id="wxErr"></div>
-</div>
+</section>
 
-<div id="panicZone"></div>
-
-<div id="overlay">
-  <div id="pinScreen">
-    <div class="pin-label">Enter code</div>
-    <div class="pin-dots" id="pinDots"></div>
-    <div class="pin-error" id="pinError"></div>
-    <div class="keypad" id="keypad"></div>
-    <button class="btn-ghost" id="pinCancel">Back to weather</button>
-  </div>
-
-  <div id="licenseScreen" style="display:none;">
-    <div class="setup-title">Activate App</div>
-    <div class="hint">Enter your license key to unlock SkyWatch.</div>
-    <input id="licenseInput" placeholder="License Key">
-    <div class="hint" id="licenseError" style="color:#d9534f;min-height:20px;"></div>
-    <button class="btn-primary" id="activateBtn">Activate</button>
-    <button class="btn-ghost" id="cancelLicense">Back</button>
-  </div>
-
-  <div id="setupScreen" style="display:none;">
-    <div class="setup-title">Enter Secret Phrase</div>
-    <div class="hint">Both people type the exact same phrase to connect securely.</div>
-    <input id="roomInput" placeholder="e.g. secret-phrase-xyz">
-    <button class="btn-primary" id="joinBtn">Join Chat</button>
-    <button class="btn-ghost" id="cancelSetup">Back</button>
-  </div>
-
-  <div id="chatScreen" style="display:none;">
-    <div class="chat-hdr">
-      <button class="hbtn" id="hideBtn">‹ Hide</button>
-      <div class="title">Chat 🔒 encrypted</div>
-      <button class="clearbtn" id="clearBtn">Clear</button>
+<div class="demo-wrap">
+  <div>
+    <div class="phone">
+      <div class="phone-screen wx-screen">
+        <div class="wx-city">Sullivan</div>
+        <div class="wx-temp-s">76°</div>
+        <div class="wx-cond-s">Mostly Sunny</div>
+        <div class="wx-hilo-s">H:79° L:56°</div>
+        <div class="wx-card-s">
+          <div class="wx-row-s"><span>Now</span><span>🌤️</span><span>76°</span></div>
+          <div class="wx-row-s"><span>2 PM</span><span>☀️</span><span>78°</span></div>
+          <div class="wx-row-s"><span>3 PM</span><span>☀️</span><span>79°</span></div>
+        </div>
+      </div>
+      <div class="phone-screen chat-screen">
+        <div class="chat-hdr-s">
+          Chat
+          <div class="chat-hdr-sub">🔒 end-to-end hidden</div>
+        </div>
+        <div class="chat-msgs">
+          <div class="bubble-s bubble-them">Hey, are you free tonight?</div>
+          <div class="bubble-s bubble-me">Yeah what time?</div>
+          <div class="bubble-s bubble-them">Around 8? Don't text regular</div>
+          <div class="bubble-s bubble-me">Got it, see you there 👍</div>
+        </div>
+        <div class="chat-inp-s">
+          <div class="inp-fake"></div>
+          <div class="inp-send">➤</div>
+        </div>
+      </div>
     </div>
-    <div id="status"></div>
-    <div id="messages"></div>
-    <div class="chat-inp">
-      <input id="msgInput" placeholder="Message…">
-      <button id="sendBtn">Send</button>
-    </div>
-  </div>
-
-  <div id="galleryScreen" style="display:none;">
-    <div class="gal-hdr">
-      <button id="galleryBack">‹ Back</button>
-      <div style="font-weight:600;flex:1;">Photos</div>
-    </div>
-    <div class="gal-grid" id="galleryGrid"><div class="gal-add" id="galleryAdd">＋</div></div>
-    <input type="file" id="galleryFile" accept="image/*" multiple style="display:none;">
+    <div class="demo-label">The same app — two different realities</div>
   </div>
 </div>
 
-<div id="lightbox">
-  <button class="lb-close" id="lbClose">✕</button>
-  <img id="lbImg" src="">
-  <button class="lb-del" id="lbDelete">Delete</button>
-</div>
+<section class="features">
+  <div class="section-label">Built Different</div>
+  <h2>Every layer is a lock.</h2>
+  <div class="feat-list">
+    <div class="feat-item">
+      <div class="feat-icon">⛅</div>
+      <div class="feat-body">
+        <h3>A real working weather app</h3>
+        <p>It forecasts using live meteorological data. It looks completely normal to anyone glancing at your screen.</p>
+      </div>
+    </div>
+    <div class="feat-item">
+      <div class="feat-icon">👆</div>
+      <div class="feat-body">
+        <h3>Custom combo gesture unlock</h3>
+        <p>Tap twice, swipe left, tap twice, swipe left. Only you and your contacts know the sequence exists.</p>
+      </div>
+    </div>
+    <div class="feat-item">
+      <div class="feat-icon">🔢</div>
+      <div class="feat-body">
+        <h3>Duress PIN + fake gallery</h3>
+        <p>Entering your decoy PIN opens a fake photo gallery so you are always protected if forced to unlock your phone.</p>
+      </div>
+    </div>
+    <div class="feat-item">
+      <div class="feat-icon">💨</div>
+      <div class="feat-body">
+        <h3>Zero trace on device</h3>
+        <p>Messages are end-to-end encrypted and wiped from memory the moment you hide the application.</p>
+      </div>
+    </div>
+  </div>
+</section>
 
-</div>
+<section class="how">
+  <div class="how-inner" style="padding: 0 24px;">
+    <div class="section-label" style="padding-top: 80px;">Simple Setup</div>
+    <h2 style="margin-bottom: 40px;">Ready in five minutes.</h2>
+    <div class="steps" style="padding-bottom: 80px;">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <h3>Get your private link</h3>
+          <p>After purchase, you get access to your dedicated SkyWatch link.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <h3>Add to home screen</h3>
+          <p>Open the link on both phones and save it to the home screen as a weather app.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <h3>Enter your secret phrase</h3>
+          <p>Both people type the same secret password to open your private chat room.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
 
-<script>
-const FIREBASE_CONFIG = {
-  apiKey: "AIzaSyBPxFR-_Nwh8KoM3HBTDOR8818uPfo79sY",
-  authDomain: "weather-2026-d5ed7.firebaseapp.com",
-  databaseURL: "https://weather-2026-d5ed7-default-rtdb.firebaseio.com",
-  projectId: "weather-2026-d5ed7",
-  storageBucket: "weather-2026-d5ed7.firebasestorage.app",
-  messagingSenderId: "714772362588",
-  appId: "1:714772362588:web:30c96298c7548f76d57d99"
-};
+<section class="pricing" id="pricing">
+  <div class="pricing-inner">
+    <div class="price-card">
+      <div class="price-tag"><sup>$</sup>9.99</div>
+      <div class="price-note">One-time payment. Yours forever.</div>
+      <div class="price-includes">
+        <div class="price-line">Your private SkyWatch link</div>
+        <div class="price-line">Works on Android & iPhone</div>
+        <div class="price-line">Real-time encrypted sync</div>
+        <div class="price-line">Duress PIN & photo decoy</div>
+        <div class="price-line">Zero subscription fees</div>
+      </div>
+      <a href="https://payhip.com/skywatch88" class="btn-buy">Get SkyWatch Now</a>
+      <p class="price-sub">Instant delivery after payment.</p>
+    </div>
+  </div>
+</section>
 
-const PIN_LEN = 4;
-const LIC_KEY = '_sw_k';
-const CODES_KEY = '_sw_c';
-let roomId = null, roomKey = null;
-let CID = localStorage.getItem('_sw_id'); if(!CID){ CID = Math.random().toString(36).slice(2); localStorage.setItem('_sw_id', CID); }
+<section class="faq">
+  <div class="section-label">Questions</div>
+  <h2>Got answers.</h2>
+  <div class="faq-list">
+    <div class="faq-item">
+      <div class="faq-q">Is this app on the App Store?</div>
+      <div class="faq-a">No. SkyWatch installs directly to your home screen from a private web link so it's completely hidden from app searches.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">Does it work across different phones?</div>
+      <div class="faq-a">Yes. One person can use an iPhone and the other an Android; it syncs seamlessly between them.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">Are messages stored anywhere?</div>
+      <div class="faq-a">No history or messages are saved on the device. Once you hide the app, everything vanishes from local memory.</div>
+    </div>
+  </div>
+</section>
 
-try {
-  firebase.initializeApp(FIREBASE_CONFIG);
-  firebase.auth().signInAnonymously().catch(e => console.warn(e));
-} catch(e) {}
+<footer>
+  © 2026 SkyWatch. All rights reserved.
+</footer>
 
-const enc = new TextEncoder(), dec = new TextDecoder();
-const b64 = buf => btoa(String.fromCharCode(...new Uint8Array(buf)));
-const unb64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
-const hex = buf => [...new Uint8Array(buf)].map(x => x.toString(16).padStart(2, '0')).join('');
-
-async function pbkdf2(secret, salt, iter, bits) {
-  const k = await crypto.subtle.importKey('raw', enc.encode(secret), 'PBKDF2', false, ['deriveBits']);
-  return crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: enc.encode(salt), iterations: iter }, k, bits);
-}
-async function deriveRoom(phrase) {
-  const [idBits, keyBits] = await Promise.all([
-    pbkdf2(phrase, 'skywatch/room/v1', 100000, 128),
-    pbkdf2(phrase, 'skywatch/key/v1', 100000, 256)
-  ]);
-  return { roomId: hex(idBits), key: await crypto.subtle.importKey('raw', keyBits, 'AES-GCM', false, ['encrypt', 'decrypt']) };
-}
-async function encryptMsg(key, obj) {
-  const iv = crypto.getRandomValues(new Uint8Array(12));
-  const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, enc.encode(JSON.stringify(obj)));
-  return { c: b64(ct), iv: b64(iv) };
-}
-async function decryptMsg(key, m) {
-  return JSON.parse(dec.decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: unb64(m.iv) }, key, unb64(m.c))));
-}
-
-const overlay = document.getElementById('overlay');
-const pinScreen = document.getElementById('pinScreen'), licenseScreen = document.getElementById('licenseScreen');
-const setupScreen = document.getElementById('setupScreen'), chatScreen = document.getElementById('chatScreen'), galleryScreen = document.getElementById('galleryScreen');
-function showOnly(el) { [pinScreen, licenseScreen, setupScreen, chatScreen, galleryScreen].forEach(s => s.style.display = 'none'); el.style.display = 'flex'; }
-
-let pinEntry = '';
-function renderDots() {
-  const c = document.getElementById('pinDots'); c.innerHTML = '';
-  for(let i=0; i<PIN_LEN; i++) {
-    const d = document.createElement('div'); d.className = 'pin-dot' + (i < pinEntry.length ? ' filled' : '');
-    c.appendChild(d);
-  }
-}
-
-(function buildKeypad() {
-  const kp = document.getElementById('keypad');
-  kp.innerHTML = '';
-  ['1','2','3','4','5','6','7','8','9','','0','⌫'].forEach(k => {
-    const b = document.createElement('button');
-    b.textContent = k;
-    if(!k) { b.style.visibility = 'hidden'; kp.appendChild(b); return; }
-    b.addEventListener('click', () => {
-      if(k === '⌫') { pinEntry = pinEntry.slice(0,-1); renderDots(); return; }
-      if(pinEntry.length < PIN_LEN) pinEntry += k;
-      renderDots();
-      if(pinEntry.length === PIN_LEN) setTimeout(verifyPin, 50);
-    });
-    kp.appendChild(b);
-  });
-})();
-renderDots();
-
-document.getElementById('panicZone').addEventListener('click', () => {
-  overlay.classList.remove('show');
-  document.getElementById('lightbox').classList.remove('show');
-  pinEntry = ''; renderDots();
-});
-
-function verifyPin() {
-  let codes = JSON.parse(localStorage.getItem(CODES_KEY) || '{"r":"2588","d":"6969"}');
-  let entry = pinEntry; pinEntry = ''; renderDots();
-  if(entry === codes.r) {
-    if(!localStorage.getItem(LIC_KEY)) showOnly(licenseScreen);
-    else showOnly(setupScreen);
-  } else if(entry === codes.d) {
-    showOnly(galleryScreen); renderGallery();
-  } else {
-    document.getElementById('pinError').textContent = 'Wrong code';
-    setTimeout(() => document.getElementById('pinError').textContent = '', 800);
-  }
-}
-
-function openAppTrigger() {
-  overlay.classList.add('show');
-  showOnly(pinScreen);
-  pinEntry = ''; renderDots();
-  document.getElementById('pinError').textContent = '';
-}
-
-// ── MULTIPLE UNLOCK GESTURES ──
-// 1. Custom Combo: Tap Twice, Swipe Left, Tap Twice, Swipe Left
-let comboStep = 0, comboTimer = null;
-const weatherArea = document.getElementById('weather');
-
-function resetCombo() { comboStep = 0; clearTimeout(comboTimer); }
-
-weatherArea.addEventListener('click', () => {
-  if(comboStep === 0) { comboStep = 1; startComboTimer(); }
-  else if(comboStep === 1) { comboStep = 2; startComboTimer(); }
-  else if(comboStep === 3) { comboStep = 4; startComboTimer(); }
-  else if(comboStep === 4) { comboStep = 5; startComboTimer(); }
-  else { resetCombo(); }
-});
-
-let touchStartX = null;
-weatherArea.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; }, { passive: true });
-weatherArea.addEventListener('touchend', e => {
-  if(touchStartX === null) return;
-  const dx = e.changedTouches[0].clientX - touchStartX; touchStartX = null;
-  if(dx < -40) {
-    if(comboStep === 2) { comboStep = 3; startComboTimer(); }
-    else if(comboStep === 5) { resetCombo(); openAppTrigger(); }
-    else { resetCombo(); }
-  }
-});
-
-let mouseStartX = null;
-weatherArea.addEventListener('mousedown', e => { mouseStartX = e.clientX; });
-weatherArea.addEventListener('mouseup', e => {
-  if(mouseStartX === null) return;
-  const dx = e.clientX - mouseStartX; mouseStartX = null;
-  if(dx < -40) {
-    if(comboStep === 2) { comboStep = 3; startComboTimer(); }
-    else if(comboStep === 5) { resetCombo(); openAppTrigger(); }
-    else { resetCombo(); }
-  }
-});
-
-function startComboTimer() {
-  clearTimeout(comboTimer);
-  comboTimer = setTimeout(() => { resetCombo(); }, 4000);
-}
-
-// 2. Corner Matrix Gesture (Top-Left -> Bottom-Right -> Top-Right)
-let matrixStep = 0, matrixTimer = null;
-function resetMatrix() { matrixStep = 0; clearTimeout(matrixTimer); }
-
-document.addEventListener('touchstart', e => {
-  const touch = e.touches[0];
-  const x = touch.clientX, y = touch.clientY;
-  const w = window.innerWidth, h = window.innerHeight;
-  
-  const isTopLeft = x < 90 && y < 90;
-  const isBottomRight = x > w - 90 && y > h - 90;
-  const isTopRight = x > w - 90 && y < 90;
-  
-  if(matrixStep === 0 && isTopLeft) {
-    matrixStep = 1;
-    startMatrixTimer();
-  } else if(matrixStep === 1 && isBottomRight) {
-    matrixStep = 2;
-    startMatrixTimer();
-  } else if(matrixStep === 2 && isTopRight) {
-    resetMatrix();
-    openAppTrigger();
-  } else {
-    // If touched anywhere else or wrong order, reset
-    if(!isTopLeft) resetMatrix();
-  }
-}, {passive: true});
-
-function startMatrixTimer() {
-  clearTimeout(matrixTimer);
-  matrixTimer = setTimeout(() => { resetMatrix(); }, 3500);
-}
-
-// 3. Backup 5-Tap Temperature Unlock
-let tempTaps = 0, tempTimer = null;
-document.getElementById('wxTemp').addEventListener('click', (e) => {
-  e.stopPropagation();
-  if(++tempTaps >= 5) { tempTaps = 0; openAppTrigger(); }
-  clearTimeout(tempTimer);
-  tempTimer = setTimeout(() => { tempTaps = 0; }, 1200);
-});
-
-document.getElementById('cancelLicense').addEventListener('click', () => overlay.classList.remove('show'));
-document.getElementById('cancelSetup').addEventListener('click', () => overlay.classList.remove('show'));
-document.getElementById('hideBtn').addEventListener('click', () => overlay.classList.remove('show'));
-document.getElementById('pinCancel').addEventListener('click', () => overlay.classList.remove('show'));
-document.getElementById('galleryBack').addEventListener('click', () => overlay.classList.remove('show'));
-
-document.getElementById('activateBtn').addEventListener('click', () => {
-  let key = document.getElementById('licenseInput').value.trim();
-  let err = document.getElementById('licenseError');
-  if(key.length < 6) { err.textContent = 'Please enter a valid license key.'; return; }
-  localStorage.setItem(LIC_KEY, key);
-  err.textContent = '';
-  showOnly(setupScreen);
-});
-
-let fbUnsubscribe = null;
-document.getElementById('joinBtn').addEventListener('click', async () => {
-  let phrase = document.getElementById('roomInput').value.trim().toLowerCase();
-  if(phrase.length < 6) { alert('Phrase is too short'); return; }
-  let r = await deriveRoom(phrase);
-  roomId = r.roomId; roomKey = r.key;
-  showOnly(chatScreen);
-  connectChat();
-});
-
-function connectChat() {
-  if(fbUnsubscribe) fbUnsubscribe();
-  let ref = firebase.database().ref('rooms/' + roomId + '/messages');
-  let query = ref.orderByChild('ts').limitToLast(100);
-  let cb = async snap => {
-    let el = document.getElementById('messages'); el.innerHTML = '';
-    snap.forEach(ch => {
-      let m = ch.val();
-      decryptMsg(roomKey, m).then(p => {
-        let b = document.createElement('div');
-        b.className = 'bubble ' + (p.s === CID ? 'me' : 'them');
-        b.textContent = p.t;
-        el.appendChild(b);
-        el.scrollTop = el.scrollHeight;
-      }).catch(() => {});
-    });
-  };
-  query.on('value', cb);
-  fbUnsubscribe = () => query.off('value', cb);
-}
-
-document.getElementById('sendBtn').addEventListener('click', sendMessage);
-document.getElementById('msgInput').addEventListener('keydown', e => { if(e.key === 'Enter') sendMessage(); });
-
-async function sendMessage() {
-  let inp = document.getElementById('msgInput');
-  let text = inp.value.trim();
-  if(!text || !roomKey) return;
-  inp.value = '';
-  let payload = await encryptMsg(roomKey, { t: text, s: CID });
-  payload.ts = firebase.database.ServerValue.TIMESTAMP;
-  firebase.database().ref('rooms/' + roomId + '/messages').push(payload);
-}
-
-document.getElementById('clearBtn').addEventListener('click', () => {
-  if(roomId) firebase.database().ref('rooms/' + roomId + '/messages').remove();
-  document.getElementById('messages').innerHTML = '';
-});
-
-let photos = [], lbId = null;
-function loadPhotos() { try { photos = JSON.parse(localStorage.getItem('_sw_ph') || '[]'); } catch { photos = []; } }
-function savePhotos() { localStorage.setItem('_sw_ph', JSON.stringify(photos)); }
-function renderGallery() {
-  loadPhotos();
-  let grid = document.getElementById('galleryGrid');
-  grid.querySelectorAll('img').forEach(n => n.remove());
-  let add = document.getElementById('galleryAdd');
-  photos.forEach(p => {
-    let img = document.createElement('img'); img.src = p.src;
-    img.addEventListener('click', () => { lbId = p.id; document.getElementById('lbImg').src = p.src; document.getElementById('lightbox').classList.add('show'); });
-    grid.insertBefore(img, add);
-  });
-}
-document.getElementById('galleryAdd').addEventListener('click', () => document.getElementById('galleryFile').click());
-document.getElementById('galleryFile').addEventListener('change', e => {
-  Array.from(e.target.files).forEach(f => {
-    let reader = new FileReader();
-    reader.onload = ev => {
-      photos.push({ id: Math.random(), src: ev.target.result });
-      savePhotos(); renderGallery();
-    };
-    reader.readAsDataURL(f);
-  });
-});
-document.getElementById('lbClose').addEventListener('click', () => document.getElementById('lightbox').classList.remove('show'));
-document.getElementById('lbDelete').addEventListener('click', () => {
-  photos = photos.filter(p => p.id !== lbId);
-  savePhotos(); document.getElementById('lightbox').classList.remove('show'); renderGallery();
-});
-
-const WC=[[[0],'☀️','🌙','Clear'],[[1],'🌤️','🌙','Mostly Clear'],[[2],'⛅','☁️','Partly Cloudy'],[[3],'☁️','☁️','Overcast'],[[45,48],'🌫️','🌫️','Fog'],[[51,53,55,56,57],'🌦️','🌧️','Drizzle'],[[61,63,65,66,67,80,81,82],'🌧️','🌧️','Rain'],[[71,73,75,77,85,86],'🌨️','🌨️','Snow'],[[95,96,99],'⛈️','⛈️','Thunderstorms']];
-const wxInfo=(c,d)=>{const r=WC.find(x=>x[0].includes(c))||WC[2];return [d?r[1]:r[2],r[3]];};
-const $=id=>document.getElementById(id), T=n=>Math.round(n)+'°';
-const hr12=s=>{const h=+s.slice(11,13);return (h%12||12)+(h<12?' AM':' PM');};
-const tm=s=>{const h=+s.slice(11,13);return (h%12||12)+':'+s.slice(14,16)+(h<12?' AM':' PM');};
-
-async function getLoc(){
-  try{const c=JSON.parse(localStorage.getItem('_sw_loc'));if(c&&Date.now()-c.t<864e5)return c;}catch{}
-  const pos=await new Promise(r=>navigator.geolocation?navigator.geolocation.getCurrentPosition(p=>r(p.coords),()=>r(null),{timeout:8000}):r(null));
-  let loc;
-  if(pos){
-    let name='My Location';
-    try{const g=await (await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${pos.latitude}&longitude=${pos.longitude}&localityLanguage=en`)).json();name=g.city||g.locality||name;}catch{}
-    loc={lat:pos.latitude,lon:pos.longitude,name};
-  }else{
-    const g=(await (await fetch('https://geocoding-api.open-meteo.com/v1/search?name=Sullivan&count=1')).json()).results[0];
-    loc={lat:g.latitude,lon:g.longitude,name:g.name};
-  }
-  loc.t=Date.now();
-  try{localStorage.setItem('_sw_loc',JSON.stringify(loc));}catch{}
-  return loc;
-}
-
-async function loadWeather(){
-  try{
-    const L=await getLoc();
-    const u=`https://api.open-meteo.com/v1/forecast?latitude=${L.lat}&longitude=${L.lon}&current=temperature_2m,apparent_temperature,relative_humidity_2m,is_day,weather_code,wind_speed_10m,surface_pressure&hourly=temperature_2m,weather_code,is_day,uv_index,visibility&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=auto&forecast_days=10`;
-    const w=await (await fetch(u)).json(), c=w.current, h=w.hourly, d=w.daily;
-    $('wxCity').textContent=L.name; $('wxTemp').textContent=T(c.temperature_2m);
-    $('wxCond').textContent=wxInfo(c.weather_code,c.is_day)[1];
-    $('wxHilo').textContent=`H:${T(d.temperature_2m_max[0])}  L:${T(d.temperature_2m_min[0])}`;
-    const now=c.time.slice(0,13); let i=h.time.findIndex(t=>t.slice(0,13)>=now); if(i<0)i=0;
-    $('wxHrs').innerHTML=h.time.slice(i,i+24).map((t,k)=>{const j=i+k;return `<div class="hr"><small>${k?hr12(t):'Now'}</small><span style="font-size:24px">${wxInfo(h.weather_code[j],h.is_day[j])[0]}</span><span>${T(k?h.temperature_2m[j]:c.temperature_2m)}</span></div>`;}).join('');
-    const mn=Math.min(...d.temperature_2m_min), mx=Math.max(...d.temperature_2m_max), rg=(mx-mn)||1;
-    $('wxDays').innerHTML=d.time.map((t,k)=>{const lo=d.temperature_2m_min[k],hi=d.temperature_2m_max[k];return `<div class="dy"><span class="d">${k?new Date(t+'T12:00').toLocaleDateString(undefined,{weekday:'short'}):'Today'}</span><span class="i">${wxInfo(d.weather_code[k],1)[0]}</span><span class="l">${T(lo)}</span><div class="bar"><i style="left:${(lo-mn)/rg*100}%;right:${100-(hi-mn)/rg*100}%"></i></div><span class="h">${T(hi)}</span></div>`;}).join('');
-    const G=[['Feels Like',T(c.apparent_temperature)],['Humidity',Math.round(c.relative_humidity_2m)+'%'],['Wind',Math.round(c.wind_speed_10m)+' mph'],['UV Index',Math.round(h.uv_index[i]||0)],['Sunrise',tm(d.sunrise[0])],['Sunset',tm(d.sunset[0])],['Pressure',(c.surface_pressure*0.02953).toFixed(2)+' inHg'],['Visibility',Math.min(10,Math.round((h.visibility[i]||16093)/1609))+' mi']];
-    $('wxGrid').innerHTML=G.map(g=>`<div class="wc"><h4>${g[0]}</h4><b>${g[1]}</b></div>`).join('');
-    const k=c.weather_code;
-    $('wxBg').style.background=!c.is_day?'linear-gradient(#0b1a33,#25416b)':k>=95?'linear-gradient(#3b3f55,#6a6f8a)':k>=51?'linear-gradient(#4f6074,#8195aa)':k>=2?'linear-gradient(#5f86ad,#9bb8d3)':'linear-gradient(#2f82e6,#7dbcf5)';
-    $('wxErr').textContent='';
-  }catch(e){
-    $('wxErr').textContent='Unable to load weather. Check your connection.';
-    if($('wxCity').textContent==='Loading…')$('wxCity').textContent='Weather';
-  }
-}
-loadWeather(); setInterval(loadWeather,9e5);
-document.addEventListener('visibilitychange',()=>{if(!document.hidden)loadWeather();});
-</script>
 </body>
 </html>
