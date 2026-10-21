@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>SkyWatch Weather</title>
 
 <!-- Firebase SDK -->
@@ -25,9 +25,9 @@
     --them:#22303f;--them-t:#eaf2fb;
   }
 }
-html,body{height:100%;margin:0;scroll-padding-top:env(safe-area-inset-top,0px);}
-body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;overflow-x:hidden;}
-*{box-sizing:border-box;}
+html,body{height:100%;margin:0;scroll-padding-top:env(safe-area-inset-top,0px);touch-action:manipulation;}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;overflow-x:hidden;-webkit-text-size-adjust:100%;}
+*{box-sizing:border-box;touch-action:manipulation;}
 #app{max-width:480px;margin:0 auto;min-height:100%;display:flex;flex-direction:column;position:relative;}
 
 /* Weather Screen */
@@ -68,15 +68,15 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .pin-dot.filled{background:var(--accent);border-color:var(--accent);}
 .pin-error{color:#d9534f;font-size:13px;height:16px;text-align:center;}
 .keypad{display:grid;grid-template-columns:repeat(3,68px);gap:14px;}
-.keypad button{width:68px;height:68px;border-radius:50%;border:1px solid rgba(128,128,128,.25);background:var(--card);color:var(--text);font-size:22px;cursor:pointer;}
+.keypad button{width:68px;height:68px;border-radius:50%;border:1px solid rgba(128,128,128,.25);background:var(--card);color:var(--text);font-size:22px;cursor:pointer;-webkit-tap-highlight-color:transparent;}
 .keypad button:active{background:var(--accent);color:#fff;}
 .btn-ghost{background:none;border:none;color:var(--sub);font-size:13px;cursor:pointer;padding:8px;}
 
-#licenseScreen, #setupScreen{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:30px;}
+#licenseScreen, #setupScreen, #pinSetupScreen{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:30px;}
 .setup-title{font-size:17px;font-weight:600;}
 .hint{font-size:12px;color:var(--sub);text-align:center;max-width:260px;line-height:1.5;}
-#licenseInput, #roomInput{width:100%;max-width:260px;text-align:center;font-size:16px;padding:10px;border-radius:10px;border:1px solid rgba(128,128,128,.3);background:var(--card);color:var(--text);}
-.btn-primary{background:var(--accent);color:#fff;border:none;border-radius:10px;padding:10px 22px;font-size:15px;cursor:pointer;}
+#licenseInput, #roomInput{width:100%;max-width:260px;text-align:center;font-size:16px;padding:10px;border-radius:10px;border:1px solid rgba(128,128,128,.3);background:var(--card);color:var(--text);outline:none;}
+.btn-primary{background:var(--accent);color:#fff;border:none;border-radius:10px;padding:10px 22px;font-size:15px;cursor:pointer;font-weight:600;}
 
 #chatScreen{flex:1;display:flex;flex-direction:column;}
 .chat-hdr{display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--card);border-bottom:1px solid rgba(128,128,128,.15);}
@@ -90,8 +90,8 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .them{align-self:flex-start;background:var(--them);color:var(--them-t);border-bottom-left-radius:4px;}
 .ts{font-size:10px;opacity:.55;margin-top:2px;display:block;}
 .chat-inp{display:flex;gap:8px;padding:10px;background:var(--card);border-top:1px solid rgba(128,128,128,.15);}
-#msgInput{flex:1;border:1px solid rgba(128,128,128,.3);border-radius:20px;padding:9px 14px;font-size:15px;background:var(--bg);color:var(--text);}
-#sendBtn{background:var(--accent);color:#fff;border:none;border-radius:20px;padding:9px 16px;font-size:14px;cursor:pointer;}
+#msgInput{flex:1;border:1px solid rgba(128,128,128,.3);border-radius:20px;padding:9px 14px;font-size:15px;background:var(--bg);color:var(--text);outline:none;}
+#sendBtn{background:var(--accent);color:#fff;border:none;border-radius:20px;padding:9px 16px;font-size:14px;cursor:pointer;font-weight:600;}
 
 #galleryScreen{flex:1;display:flex;flex-direction:column;}
 .gal-hdr{display:flex;align-items:center;gap:10px;padding:14px 16px;background:var(--card);border-bottom:1px solid rgba(128,128,128,.15);}
@@ -160,6 +160,15 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
     <div class="hint" id="licenseError" style="color:#d9534f;min-height:20px;"></div>
     <button class="btn-primary" id="activateBtn">Activate</button>
     <button class="btn-ghost" id="cancelLicense">Back</button>
+  </div>
+
+  <!-- FIRST-TIME CUSTOM PIN SETUP SCREEN -->
+  <div id="pinSetupScreen" style="display:none;">
+    <div class="setup-title" id="pinSetupTitle">Choose your 4-digit code</div>
+    <div class="hint" id="pinSetupHint">This code will open your private chat from now on.</div>
+    <div class="pin-dots" id="setupDots"></div>
+    <div class="pin-error" id="setupError"></div>
+    <div class="keypad" id="setupKeypad"></div>
   </div>
 
   <div id="setupScreen" style="display:none;">
@@ -251,12 +260,13 @@ async function decryptMsg(key, m) {
 
 const overlay = document.getElementById('overlay');
 const pinScreen = document.getElementById('pinScreen'), licenseScreen = document.getElementById('licenseScreen');
-const setupScreen = document.getElementById('setupScreen'), chatScreen = document.getElementById('chatScreen'), galleryScreen = document.getElementById('galleryScreen');
-function showOnly(el) { [pinScreen, licenseScreen, setupScreen, chatScreen, galleryScreen].forEach(s => s.style.display = 'none'); el.style.display = 'flex'; }
+const setupScreen = document.getElementById('setupScreen'), chatScreen = document.getElementById('chatScreen'), galleryScreen = document.getElementById('galleryScreen'), pinSetupScreen = document.getElementById('pinSetupScreen');
+function showOnly(el) { [pinScreen, licenseScreen, setupScreen, chatScreen, galleryScreen, pinSetupScreen].forEach(s => { if(s) s.style.display = 'none'; }); if(el) el.style.display = 'flex'; }
 
 let pinEntry = '';
 function renderDots() {
-  const c = document.getElementById('pinDots'); c.innerHTML = '';
+  const c = document.getElementById('pinDots'); if(!c) return;
+  c.innerHTML = '';
   for(let i=0; i<PIN_LEN; i++) {
     const d = document.createElement('div'); d.className = 'pin-dot' + (i < pinEntry.length ? ' filled' : '');
     c.appendChild(d);
@@ -264,7 +274,7 @@ function renderDots() {
 }
 
 (function buildKeypad() {
-  const kp = document.getElementById('keypad');
+  const kp = document.getElementById('keypad'); if(!kp) return;
   kp.innerHTML = '';
   ['1','2','3','4','5','6','7','8','9','','0','⌫'].forEach(k => {
     const b = document.createElement('button');
@@ -283,13 +293,21 @@ renderDots();
 
 document.getElementById('panicZone').addEventListener('click', () => {
   overlay.classList.remove('show');
-  document.getElementById('lightbox').classList.remove('show');
   pinEntry = ''; renderDots();
 });
 
 function verifyPin() {
-  let codes = JSON.parse(localStorage.getItem(CODES_KEY) || '{"r":"2588","d":"6969"}');
+  let codes = JSON.parse(localStorage.getItem(CODES_KEY) || 'null');
   let entry = pinEntry; pinEntry = ''; renderDots();
+  
+  if(!codes) {
+    // If no custom codes are set yet, accept default '2588' to trigger setup, or '6969' for decoy
+    if(entry === '2588') { showOnly(licenseScreen); }
+    else if(entry === '6969') { showOnly(galleryScreen); renderGallery(); }
+    else { document.getElementById('pinError').textContent = 'Wrong code'; setTimeout(() => document.getElementById('pinError').textContent = '', 800); }
+    return;
+  }
+
   if(entry === codes.r) {
     if(!localStorage.getItem(LIC_KEY)) showOnly(licenseScreen);
     else showOnly(setupScreen);
@@ -306,6 +324,87 @@ function openAppTrigger() {
   showOnly(pinScreen);
   pinEntry = ''; renderDots();
   document.getElementById('pinError').textContent = '';
+}
+
+// ── FIRST-TIME CUSTOM PIN SETUP FLOW ──
+let setupStep = 0, setupTmp = {}, setupEntry = '';
+const SETUP_LABELS = [
+  {title: 'Choose a 4-digit code', hint: 'This code will open your private chat from now on.'},
+  {title: 'Confirm your code', hint: 'Type your 4-digit code again to confirm.'},
+  {title: 'Choose a decoy code', hint: 'This code opens the fake photo gallery under pressure.'},
+  {title: 'Confirm decoy code', hint: 'Type your decoy code again to confirm.'}
+];
+
+function renderSetupDots() {
+  const c = document.getElementById('setupDots'); if(!c) return;
+  c.innerHTML = '';
+  for(let i=0; i<PIN_LEN; i++) {
+    const d = document.createElement('div'); d.className = 'pin-dot' + (i < setupEntry.length ? ' filled' : '');
+    c.appendChild(d);
+  }
+}
+
+(function buildSetupKeypad() {
+  const kp = document.getElementById('setupKeypad'); if(!kp) return;
+  kp.innerHTML = '';
+  ['1','2','3','4','5','6','7','8','9','','0','⌫'].forEach(k => {
+    const b = document.createElement('button');
+    b.textContent = k;
+    if(!k) { b.style.visibility = 'hidden'; kp.appendChild(b); return; }
+    b.addEventListener('click', () => {
+      if(k === '⌫') { setupEntry = setupEntry.slice(0,-1); renderSetupDots(); return; }
+      if(setupEntry.length < PIN_LEN) setupEntry += k;
+      renderSetupDots();
+      if(setupEntry.length === PIN_LEN) setTimeout(handlePinSetupComplete, 50);
+    });
+    kp.appendChild(b);
+  });
+})();
+
+function startPinSetupFlow() {
+  setupEntry = ''; setupStep = 0; setupTmp = {};
+  showOnly(pinSetupScreen);
+  document.getElementById('pinSetupTitle').textContent = SETUP_LABELS[0].title;
+  document.getElementById('pinSetupHint').textContent = SETUP_LABELS[0].hint;
+  renderSetupDots();
+}
+
+function handlePinSetupComplete() {
+  const entry = setupEntry;
+  const errEl = document.getElementById('setupError');
+  const nextStep = () => {
+    setupStep++; setupEntry = ''; renderSetupDots();
+    document.getElementById('pinSetupTitle').textContent = SETUP_LABELS[setupStep].title;
+    document.getElementById('pinSetupHint').textContent = SETUP_LABELS[setupStep].hint;
+  };
+
+  if(setupStep === 0) { setupTmp.r = entry; return nextStep(); }
+  if(setupStep === 1) {
+    if(entry !== setupTmp.r) {
+      errEl.textContent = "Codes didn't match";
+      setTimeout(() => { setupEntry = ''; renderSetupDots(); errEl.textContent = ''; setupStep = 0; document.getElementById('pinSetupTitle').textContent = SETUP_LABELS[0].title; }, 900);
+      return;
+    }
+    return nextStep();
+  }
+  if(setupStep === 2) {
+    if(entry === setupTmp.r) {
+      errEl.textContent = "Decoy must be different";
+      setTimeout(() => { setupEntry = ''; renderSetupDots(); errEl.textContent = ''; }, 900);
+      return;
+    }
+    setupTmp.d = entry; return nextStep();
+  }
+  if(entry !== setupTmp.d) {
+    errEl.textContent = "Codes didn't match";
+    setTimeout(() => { setupEntry = ''; renderSetupDots(); errEl.textContent = ''; setupStep = 2; document.getElementById('pinSetupTitle').textContent = SETUP_LABELS[2].title; }, 900);
+    return;
+  }
+
+  // Save custom codes permanently
+  localStorage.setItem(CODES_KEY, JSON.stringify({ r: setupTmp.r, d: setupTmp.d }));
+  setupTmp = {}; setupEntry = '';
+  showOnly(setupScreen);
 }
 
 // Unlock methods
@@ -377,7 +476,6 @@ function attachAccelerometer() {
       if (delta > peakDelta) peakDelta = delta;
       if (delta > GRAB_THRESHOLD && overlay.classList.contains('show')) {
         overlay.classList.remove('show');
-        document.getElementById('lightbox').classList.remove('show');
         pinEntry = ''; renderDots();
       }
     }
@@ -396,139 +494,4 @@ document.getElementById('cancelLicense').addEventListener('click', () => overlay
 document.getElementById('cancelSetup').addEventListener('click', () => overlay.classList.remove('show'));
 document.getElementById('hideBtn').addEventListener('click', () => overlay.classList.remove('show'));
 document.getElementById('pinCancel').addEventListener('click', () => overlay.classList.remove('show'));
-document.getElementById('galleryBack').addEventListener('click', () => overlay.classList.remove('show'));
-
-document.getElementById('activateBtn').addEventListener('click', () => {
-  let key = document.getElementById('licenseInput').value.trim();
-  let err = document.getElementById('licenseError');
-  if(key.length < 4) { err.textContent = 'Please enter a valid license key.'; return; }
-  localStorage.setItem(LIC_KEY, key);
-  err.textContent = '';
-  showOnly(setupScreen);
-});
-
-let fbUnsubscribe = null;
-document.getElementById('joinBtn').addEventListener('click', async () => {
-  let phrase = document.getElementById('roomInput').value.trim().toLowerCase();
-  if(phrase.length < 4) { alert('Phrase is too short'); return; }
-  let r = await deriveRoom(phrase);
-  roomId = r.roomId; roomKey = r.key;
-  showOnly(chatScreen);
-  connectChat();
-});
-
-function connectChat() {
-  if(fbUnsubscribe) fbUnsubscribe();
-  let ref = firebase.database().ref('rooms/' + roomId + '/messages');
-  let query = ref.orderByChild('ts').limitToLast(100);
-  let cb = async snap => {
-    let el = document.getElementById('messages'); el.innerHTML = '';
-    snap.forEach(ch => {
-      let m = ch.val();
-      decryptMsg(roomKey, m).then(p => {
-        let b = document.createElement('div');
-        b.className = 'bubble ' + (p.s === CID ? 'me' : 'them');
-        b.textContent = p.t;
-        el.appendChild(b);
-        el.scrollTop = el.scrollHeight;
-      }).catch(() => {});
-    });
-  };
-  query.on('value', cb);
-  fbUnsubscribe = () => query.off('value', cb);
-}
-
-document.getElementById('sendBtn').addEventListener('click', sendMessage);
-document.getElementById('msgInput').addEventListener('keydown', e => { if(e.key === 'Enter') sendMessage(); });
-
-async function sendMessage() {
-  let inp = document.getElementById('msgInput');
-  let text = inp.value.trim();
-  if(!text || !roomKey) return;
-  inp.value = '';
-  let payload = await encryptMsg(roomKey, { t: text, s: CID });
-  payload.ts = firebase.database.ServerValue.TIMESTAMP;
-  firebase.database().ref('rooms/' + roomId + '/messages').push(payload);
-}
-
-document.getElementById('clearBtn').addEventListener('click', () => {
-  if(roomId) firebase.database().ref('rooms/' + roomId + '/messages').remove();
-  document.getElementById('messages').innerHTML = '';
-});
-
-let photos = [], lbId = null;
-function loadPhotos() { try { photos = JSON.parse(localStorage.getItem(GALLERY_KEY) || '[]'); } catch { photos = []; } }
-function savePhotos() { try { localStorage.setItem(GALLERY_KEY, JSON.stringify(photos)); } catch {} }
-function renderGallery() {
-  loadPhotos();
-  let grid = document.getElementById('galleryGrid');
-  grid.querySelectorAll('img').forEach(n => n.remove());
-  let add = document.getElementById('galleryAdd');
-  photos.forEach(p => {
-    let img = document.createElement('img'); img.src = p.src;
-    img.addEventListener('click', () => { lbId = p.id; document.getElementById('lbImg').src = p.src; document.getElementById('lightbox').classList.add('show'); });
-    grid.insertBefore(img, add);
-  });
-}
-document.getElementById('galleryAdd').addEventListener('click', () => document.getElementById('galleryFile').click());
-document.getElementById('galleryFile').addEventListener('change', e => {
-  Array.from(e.target.files).forEach(f => {
-    let reader = new FileReader();
-    reader.onload = ev => {
-      photos.push({ id: Math.random(), src: ev.target.result });
-      savePhotos(); renderGallery();
-    };
-    reader.readAsDataURL(f);
-  });
-});
-document.getElementById('lbClose').addEventListener('click', () => document.getElementById('lightbox').classList.remove('show'));
-document.getElementById('lbDelete').addEventListener('click', () => {
-  photos = photos.filter(p => p.id !== lbId);
-  savePhotos(); document.getElementById('lightbox').classList.remove('show'); renderGallery();
-});
-
-const WC=[[[0],'☀️','🌙','Clear'],[[1],'🌤️','🌙','Mostly Clear'],[[2],'⛅','☁️','Partly Cloudy'],[[3],'☁️','☁️','Overcast'],[[45,48],'🌫️','🌫️','Fog'],[[51,53,55,56,57],'🌦️','🌧️','Drizzle'],[[61,63,65,66,67,80,81,82],'🌧️','🌧️','Rain'],[[71,73,75,77,85,86],'🌨️','🌨️','Snow'],[[95,96,99],'⛈️','⛈️','Thunderstorms']];
-const wxInfo=(c,d)=>{const r=WC.find(x=>x[0].includes(c))||WC[2];return [d?r[1]:r[2],r[3]];};
-const $=id=>document.getElementById(id), T=n=>Math.round(n)+'°';
-const hr12=s=>{const h=+s.slice(11,13);return (h%12||12)+(h<12?' AM':' PM');};
-const tm=s=>{const h=+s.slice(11,13);return (h%12||12)+':'+s.slice(14,16)+(h<12?' AM':' PM');};
-
-async function getLoc(){
-  try{const c=JSON.parse(localStorage.getItem('_sw_loc'));if(c&&Date.now()-c.t<864e5)return c;}catch{}
-  const pos=await new Promise(r=>navigator.geolocation?navigator.geolocation.getCurrentPosition(p=>r(p.coords),()=>r(null),{timeout:8000}):r(null));
-  let loc;
-  if(pos){
-    let name='My Location';
-    try{const g=await (await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${pos.latitude}&longitude=${pos.longitude}&localityLanguage=en`)).json();name=g.city||g.locality||name;}catch{}
-    loc={lat:pos.latitude,lon:pos.longitude,name};
-  }else{
-    const g=(await (await fetch('https://geocoding-api.open-meteo.com/v1/search?name=Sullivan&count=1')).json()).results[0];
-    loc={lat:g.latitude,lon:g.longitude,name:g.name};
-  }
-  loc.t=Date.now();
-  try{localStorage.setItem('_sw_loc',JSON.stringify(loc));}catch{}
-  return loc;
-}
-
-async function loadWeather(){
-  try{
-    const L=await getLoc();
-    const u=`https://api.open-meteo.com/v1/forecast?latitude=${L.lat}&longitude=${L.lon}&current=temperature_2m,apparent_temperature,relative_humidity_2m,is_day,weather_code,wind_speed_10m,surface_pressure&hourly=temperature_2m,weather_code,is_day,uv_index,visibility&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=auto&forecast_days=10`;
-    const w=await (await fetch(u)).json(), c=w.current, h=w.hourly, d=w.daily;
-    $('wxCity').textContent=L.name; $('wxTemp').textContent=T(c.temperature_2m);
-    $('wxCond').textContent=wxInfo(c.weather_code,c.is_day)[1];
-    $('wxHilo').textContent=`H:${T(d.temperature_2m_max[0])}  L:${T(d.temperature_2m_min[0])}`;
-    const now=c.time.slice(0,13); let i=h.time.findIndex(t=>t.slice(0,13)>=now); if(i<0)i=0;
-    $('wxHrs').innerHTML=h.time.slice(i,i+24).map((t,k)=>{const j=i+k;return `<div class="hr"><small>${k?hr12(t):'Now'}</small><span style="font-size:24px">${wxInfo(h.weather_code[j],h.is_day[j])[0]}</span><span>${T(k?h.temperature_2m[j]:c.temperature_2m)}</span></div>`;}).join('');
-    const mn=Math.min(...d.temperature_2m_min), mx=Math.max(...d.temperature_2m_max), rg=(mx-mn)||1;
-    $('wxDays').innerHTML=d.time.map((t,k)=>{const lo=d.temperature_2m_min[k],hi=d.temperature_2m_max[k];return `<div class="dy"><span class="d">${k?new Date(t+'T12:00').toLocaleDateString(undefined,{weekday:'short'}):'Today'}</span><span class="i">${wxInfo(d.weather_code[k],1)[0]}</span><span class="l">${T(lo)}</span><div class="bar"><i style="left:${(lo-mn)/rg*100}%;right:${100-(hi-mn)/rg*100}%"></i></div><span class="h">${T(hi)}</span></div>`;}).join('');
-    const G=[['Feels Like',T(c.apparent_temperature)],['Humidity',Math.round(c.relative_humidity_2m)+'%'],['Wind',Math.round(c.wind_speed_10m)+' mph'],['UV Index',Math.round(h.uv_index[i]||0)],['Sunrise',tm(d.sunrise[0])],['Sunset',tm(d.sunset[0])],['Pressure',(c.surface_pressure*0.02953).toFixed(2)+' inHg'],['Visibility',Math.min(10,Math.round((h.visibility[i]||16093)/1609))+' mi']];
-    $('wxGrid').innerHTML=G.map(g=>`<div class="wc"><h4>${g[0]}</h4><b>${g[1]}</b></div>`).join('');
-  }catch(e){
-    $('wxErr').textContent='Unable to load weather.';
-  }
-}
-loadWeather();
-</script>
-</body>
-</html>
+document.getElementById('galleryBack').addEventListener('click', () => over
