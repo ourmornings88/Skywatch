@@ -279,7 +279,8 @@ function renderDots() {
     const b = document.createElement('button');
     b.textContent = k;
     if(!k) { b.style.visibility = 'hidden'; kp.appendChild(b); return; }
-    b.addEventListener('click', () => {
+    b.addEventListener('click', (e) => {
+      e.preventDefault();
       if(k === '⌫') { pinEntry = pinEntry.slice(0,-1); renderDots(); return; }
       if(pinEntry.length < PIN_LEN) pinEntry += k;
       renderDots();
@@ -345,7 +346,8 @@ function renderSetupDots() {
     const b = document.createElement('button');
     b.textContent = k;
     if(!k) { b.style.visibility = 'hidden'; kp.appendChild(b); return; }
-    b.addEventListener('click', () => {
+    b.addEventListener('click', (e) => {
+      e.preventDefault();
       if(k === '⌫') { setupEntry = setupEntry.slice(0,-1); renderSetupDots(); return; }
       if(setupEntry.length < PIN_LEN) setupEntry += k;
       renderSetupDots();
@@ -494,7 +496,8 @@ document.getElementById('activateBtn').addEventListener('click', () => {
 });
 
 let fbUnsubscribe = null;
-document.getElementById('joinBtn').addEventListener('click', async () => {
+document.getElementById('joinBtn').addEventListener('click', async (e) => {
+  e.preventDefault();
   let phrase = document.getElementById('roomInput').value.trim().toLowerCase();
   if(phrase.length < 4) { alert('Phrase is too short'); return; }
   let r = await deriveRoom(phrase);
@@ -524,8 +527,8 @@ function connectChat() {
   fbUnsubscribe = () => query.off('value', cb);
 }
 
-document.getElementById('sendBtn').addEventListener('click', sendMessage);
-document.getElementById('msgInput').addEventListener('keydown', e => { if(e.key === 'Enter') sendMessage(); });
+document.getElementById('sendBtn').addEventListener('click', (e) => { e.preventDefault(); sendMessage(); });
+document.getElementById('msgInput').addEventListener('keydown', e => { if(e.key === 'Enter') { e.preventDefault(); sendMessage(); } });
 
 async function sendMessage() {
   let inp = document.getElementById('msgInput');
@@ -553,13 +556,14 @@ function renderGallery() {
 }
 document.getElementById('galleryAdd').addEventListener('click', () => document.getElementById('galleryFile').click());
 document.getElementById('galleryFile').addEventListener('change', e => {
-  Array.from(e.target.files).forEach(f => {
+  const files = Array.from(e.target.files);
+  files.forEach(file => {
     let reader = new FileReader();
     reader.onload = ev => {
-      photos.push({ id: Math.random(), src: ev.target.result });
+      photos.push({ id: Math.random() + '_' + Date.now(), src: ev.target.result });
       savePhotos(); renderGallery();
     };
-    reader.readAsDataURL(f);
+    reader.readAsDataURL(file);
   });
 });
 document.getElementById('lbClose').addEventListener('click', () => document.getElementById('lightbox').classList.remove('show'));
@@ -583,7 +587,7 @@ async function getLoc(){
     try{const g=await (await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${pos.latitude}&longitude=${pos.longitude}&localityLanguage=en`)).json();name=g.city||g.locality||name;}catch{}
     loc={lat:pos.latitude,lon:pos.longitude,name};
   }else{
-    const g=(await (await fetch('https://geocoding-api.open-meteo.com/v1/search?name=Sullivan&count=1')).json()).results[0];
+    const g=(await (await fetch('https://api.open-meteo.com/v1/search?name=Sullivan&count=1')).json()).results[0];
     loc={lat:g.latitude,lon:g.longitude,name:g.name};
   }
   loc.t=Date.now();
