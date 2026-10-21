@@ -28,7 +28,7 @@ body { background:var(--bg); color:var(--text); font-family:-apple-system,BlinkM
 .wx-cond { font-size:19px; opacity:.95; }
 .wx-hilo { font-size:16px; opacity:.9; margin-top:2px; white-space:pre; }
 .wc { background:var(--card); -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px); border-radius:18px; padding:14px 16px; margin-top:14px; }
-.wc h4 { margin:0 0 10px; font-size:12px; font-weight:600; opacity:.75; text-transform:uppercase; letter-spacing:.05em; }
+.wc h4 { margin:0 0 8px; font-size:12px; font-weight:600; opacity:.75; text-transform:uppercase; letter-spacing:.05em; }
 .hrs { display:flex; gap:18px; overflow-x:auto; padding-bottom:4px; scrollbar-width:none; }
 .hrs::-webkit-scrollbar { display:none; }
 .hr { display:flex; flex-direction:column; align-items:center; gap:6px; min-width:42px; font-size:15px; }
@@ -86,6 +86,12 @@ body { background:var(--bg); color:var(--text); font-family:-apple-system,BlinkM
 .gal-grid { flex:1; overflow-y:auto; display:grid; grid-template-columns:repeat(3,1fr); gap:2px; padding:2px; }
 .gal-grid img { width:100%; aspect-ratio:1; object-fit:cover; cursor:pointer; }
 .gal-add { display:flex; align-items:center; justify-content:center; aspect-ratio:1; background:#e7edf3; color:#5b7794; font-size:30px; cursor:pointer; }
+
+#lightbox { position:fixed; inset:0; background:rgba(0,0,0,.94); display:none; align-items:center; justify-content:center; flex-direction:column; gap:14px; z-index:200; }
+#lightbox.show { display:flex; }
+#lbImg { max-width:92%; max-height:78%; object-fit:contain; }
+.lb-close { position:absolute; top:16px; right:16px; color:#fff; font-size:26px; background:none; border:none; cursor:pointer; }
+.lb-del { color:#ff6b6b; background:rgba(255,255,255,.1); border:1px solid rgba(255,100,100,.3); border-radius:8px; padding:8px 20px; font-size:14px; cursor:pointer; }
 </style>
 </head>
 <body>
@@ -93,15 +99,24 @@ body { background:var(--bg); color:var(--text); font-family:-apple-system,BlinkM
 
 <div id="weather">
   <div class="wx-top">
-    <div class="wx-city" id="wxCity">Loading…</div>
+    <div class="wx-city" id="wxCity">Sullivan</div>
     <div class="wx-icon-el" id="wxIconEl">🌤️</div>
-    <div class="wx-temp" id="wxTemp">--°</div>
-    <div class="wx-cond" id="wxCond"></div>
-    <div class="wx-hilo" id="wxHilo"></div>
+    <div class="wx-temp" id="wxTemp">76°</div>
+    <div class="wx-cond" id="wxCond">Mostly Sunny</div>
+    <div class="wx-hilo" id="wxHilo">H:79°  L:56°</div>
   </div>
-  <div class="wc"><h4>Hourly Forecast</h4><div class="hrs" id="wxHrs"></div></div>
-  <div class="wc"><h4>10-Day Forecast</h4><div id="wxDays"></div></div>
-  <div class="grid" id="wxGrid"></div>
+  <div class="wc"><h4>Hourly Forecast</h4><div class="hrs" id="wxHrs">
+    <div class="hr"><small>Now</small><span style="font-size:24px">🌤️</span><span>76°</span></div>
+    <div class="hr"><small>2 PM</small><span style="font-size:24px">☀️</span><span>78°</span></div>
+    <div class="hr"><small>3 PM</small><span style="font-size:24px">☀️</span><span>79°</span></div>
+    <div class="hr"><small>4 PM</small><span style="font-size:24px">🌤️</span><span>77°</span></div>
+    <div class="hr"><small>5 PM</small><span style="font-size:24px">⛅</span><span>73°</span></div>
+  </div></div>
+  <div class="wc"><h4>10-Day Forecast</h4><div id="wxDays">
+    <div class="dy"><span class="d">Today</span><span class="i">🌤️</span><span class="l">56°</span><div class="bar"><i style="left:10%;right:20%"></i></div><span class="h">79°</span></div>
+    <div class="dy"><span class="d">Sun</span><span class="i">☀️</span><span class="l">54°</span><div class="bar"><i style="left:5%;right:25%"></i></div><span class="h">77°</span></div>
+    <div class="dy"><span class="d">Mon</span><span class="i">⛅</span><span class="l">58°</span><div class="bar"><i style="left:15%;right:30%"></i></div><span class="h">74°</span></div>
+  </div></div>
   <div class="wx-err" id="wxErr"></div>
 </div>
 
@@ -160,7 +175,7 @@ body { background:var(--bg); color:var(--text); font-family:-apple-system,BlinkM
 <div id="lightbox">
   <button class="lb-close" id="lbClose">✕</button>
   <img id="lbImg" src="">
-  <button class="lb-del" id="lbDelete">Delete</button>
+  <button class="lb-del" id="lbDelete">Delete photo</button>
 </div>
 
 </div>
@@ -215,4 +230,153 @@ async function decryptMsg(key, m) {
 const overlay = document.getElementById('overlay');
 const pinScreen = document.getElementById('pinScreen'), licenseScreen = document.getElementById('licenseScreen');
 const setupScreen = document.getElementById('setupScreen'), chatScreen = document.getElementById('chatScreen'), galleryScreen = document.getElementById('galleryScreen');
-function showOnly(el) { [pinScreen, licenseScreen, setupScreen, chatScreen, galleryScreen].forEach(s => s.style.display
+function showOnly(el) { [pinScreen, licenseScreen, setupScreen, chatScreen, galleryScreen].forEach(s => s.style.display = 'none'); el.style.display = 'flex'; }
+
+let pinEntry = '';
+function renderDots() {
+  const c = document.getElementById('pinDots'); c.innerHTML = '';
+  for(let i=0; i<PIN_LEN; i++) {
+    const d = document.createElement('div'); d.className = 'pin-dot' + (i < pinEntry.length ? ' filled' : '');
+    c.appendChild(d);
+  }
+}
+
+(function buildKeypad() {
+  const kp = document.getElementById('keypad');
+  kp.innerHTML = '';
+  ['1','2','3','4','5','6','7','8','9','','0','⌫'].forEach(k => {
+    const b = document.createElement('button');
+    b.textContent = k;
+    if(!k) { b.style.visibility = 'hidden'; kp.appendChild(b); return; }
+    b.addEventListener('click', () => {
+      if(k === '⌫') { pinEntry = pinEntry.slice(0,-1); renderDots(); return; }
+      if(pinEntry.length < PIN_LEN) pinEntry += k;
+      renderDots();
+      if(pinEntry.length === PIN_LEN) setTimeout(verifyPin, 50);
+    });
+    kp.appendChild(b);
+  });
+})();
+renderDots();
+
+document.getElementById('panicZone').addEventListener('click', () => {
+  overlay.classList.remove('show');
+  pinEntry = ''; renderDots();
+});
+
+function verifyPin() {
+  let codes = JSON.parse(localStorage.getItem(CODES_KEY) || '{"r":"2588","d":"6969"}');
+  let entry = pinEntry; pinEntry = ''; renderDots();
+  if(entry === codes.r) {
+    if(!localStorage.getItem(LIC_KEY)) showOnly(licenseScreen);
+    else showOnly(setupScreen);
+  } else if(entry === codes.d) {
+    showOnly(galleryScreen); renderGallery();
+  } else {
+    document.getElementById('pinError').textContent = 'Wrong code';
+    setTimeout(() => document.getElementById('pinError').textContent = '', 800);
+  }
+}
+
+function openAppTrigger() {
+  overlay.classList.add('show');
+  showOnly(pinScreen);
+  pinEntry = ''; renderDots();
+  document.getElementById('pinError').textContent = '';
+}
+
+// Unlock methods
+let comboStep = 0, comboTimer = null;
+const weatherArea = document.getElementById('weather');
+function resetCombo() { comboStep = 0; clearTimeout(comboTimer); }
+
+weatherArea.addEventListener('click', () => {
+  if(comboStep === 0) { comboStep = 1; startComboTimer(); }
+  else if(comboStep === 1) { comboStep = 2; startComboTimer(); }
+  else if(comboStep === 3) { comboStep = 4; startComboTimer(); }
+  else if(comboStep === 4) { comboStep = 5; startComboTimer(); }
+  else { resetCombo(); }
+});
+
+let touchStartX = null;
+weatherArea.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; }, { passive: true });
+weatherArea.addEventListener('touchend', e => {
+  if(touchStartX === null) return;
+  const dx = e.changedTouches[0].clientX - touchStartX; touchStartX = null;
+  if(dx < -40) {
+    if(comboStep === 2) { comboStep = 3; startComboTimer(); }
+    else if(comboStep === 5) { resetCombo(); openAppTrigger(); }
+    else { resetCombo(); }
+  }
+});
+function startComboTimer() { clearTimeout(comboTimer); comboTimer = setTimeout(() => { resetCombo(); }, 4000); }
+
+let tempTaps = 0, tempTimer = null;
+document.getElementById('wxTemp').addEventListener('click', (e) => {
+  e.stopPropagation();
+  if(++tempTaps >= 5) { tempTaps = 0; openAppTrigger(); }
+  clearTimeout(tempTimer);
+  tempTimer = setTimeout(() => { tempTaps = 0; }, 1200);
+});
+
+document.getElementById('cancelLicense').addEventListener('click', () => overlay.classList.remove('show'));
+document.getElementById('cancelSetup').addEventListener('click', () => overlay.classList.remove('show'));
+document.getElementById('hideBtn').addEventListener('click', () => overlay.classList.remove('show'));
+document.getElementById('pinCancel').addEventListener('click', () => overlay.classList.remove('show'));
+document.getElementById('galleryBack').addEventListener('click', () => overlay.classList.remove('show'));
+
+document.getElementById('activateBtn').addEventListener('click', () => {
+  let key = document.getElementById('licenseInput').value.trim();
+  let err = document.getElementById('licenseError');
+  if(key.length < 4) { err.textContent = 'Please enter a valid license key.'; return; }
+  localStorage.setItem(LIC_KEY, key);
+  err.textContent = '';
+  showOnly(setupScreen);
+});
+
+let fbUnsubscribe = null;
+document.getElementById('joinBtn').addEventListener('click', async () => {
+  let phrase = document.getElementById('roomInput').value.trim().toLowerCase();
+  if(phrase.length < 4) { alert('Phrase is too short'); return; }
+  let r = await deriveRoom(phrase);
+  roomId = r.roomId; roomKey = r.key;
+  showOnly(chatScreen);
+  connectChat();
+});
+
+function connectChat() {
+  if(fbUnsubscribe) fbUnsubscribe();
+  let ref = firebase.database().ref('rooms/' + roomId + '/messages');
+  let query = ref.orderByChild('ts').limitToLast(100);
+  let cb = async snap => {
+    let el = document.getElementById('messages'); el.innerHTML = '';
+    snap.forEach(ch => {
+      let m = ch.val();
+      decryptMsg(roomKey, m).then(p => {
+        let b = document.createElement('div');
+        b.className = 'bubble ' + (p.s === CID ? 'me' : 'them');
+        b.textContent = p.t;
+        el.appendChild(b);
+        el.scrollTop = el.scrollHeight;
+      }).catch(() => {});
+    });
+  };
+  query.on('value', cb);
+  fbUnsubscribe = () => query.off('value', cb);
+}
+
+document.getElementById('sendBtn').addEventListener('click', sendMessage);
+document.getElementById('msgInput').addEventListener('keydown', e => { if(e.key === 'Enter') sendMessage(); });
+
+async function sendMessage() {
+  let inp = document.getElementById('msgInput');
+  let text = inp.value.trim();
+  if(!text || !roomKey) return;
+  inp.value = '';
+  let payload = await encryptMsg(roomKey, { t: text, s: CID });
+  payload.ts = firebase.database.ServerValue.TIMESTAMP;
+  firebase.database().ref('rooms/' + roomId + '/messages').push(payload);
+}
+</script>
+</body>
+</html>
