@@ -4,85 +4,130 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>SkyWatch Weather</title>
+
+<!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
-<style>
-:root { --bg:#2f82e6; --card:rgba(255,255,255,0.18); --text:#fff; }
-body { margin:0; background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; height:100vh; overflow-x:hidden; }
-#weather { padding:24px 16px; max-width:480px; margin:0 auto; user-select:none; }
-.wx-top { text-align:center; margin-top:20px; }
-.wx-city { font-size:24px; font-weight:500; }
-.wx-temp { font-size:80px; font-weight:200; margin:10px 0; }
-.wx-cond { font-size:18px; opacity:0.9; }
-.card { background:var(--card); backdrop-filter:blur(10px); border-radius:16px; padding:16px; margin-top:20px; }
-.card h4 { margin:0 0 10px; font-size:12px; text-transform:uppercase; letter-spacing:1px; opacity:0.7; }
-.row { display:flex; justify-content:space-between; padding:8px 0; border-top:1px solid rgba(255,255,255,0.15); font-size:15px; }
-.row:first-child { border-top:none; }
 
-/* Overlay & Secure Screens */
+<style>
+:root {
+  --bg:#2f82e6; --card:rgba(255,255,255,0.18); --text:#fff;
+  --accent:#2b8aef; --me:#2b8aef; --me-t:#fff;
+  --them:#e7edf3; --them-t:#0f2a43;
+}
+html, body { height:100%; margin:0; }
+body { background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; overflow-x:hidden; transition: background 0.5s ease; }
+#app { max-width:480px; margin:0 auto; min-height:100%; display:flex; flex-direction:column; position:relative; }
+
+#weather { padding:calc(env(safe-area-inset-top,0px) + 24px) 16px 40px; color:#fff; user-select:none; flex:1; text-shadow:0 1px 3px rgba(0,0,0,.15); }
+.wx-top { text-align:center; }
+.wx-city { font-size:26px; font-weight:500; cursor:default; display:inline-block; padding:6px 14px; }
+.wx-icon-el { font-size:54px; margin:8px 0; cursor:pointer; -webkit-touch-callout:none; }
+.wx-temp { font-size:88px; font-weight:200; line-height:1; margin:0; cursor:pointer; }
+.wx-cond { font-size:19px; opacity:.95; }
+.wx-hilo { font-size:16px; opacity:.9; margin-top:2px; white-space:pre; }
+.wc { background:var(--card); -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px); border-radius:18px; padding:14px 16px; margin-top:14px; }
+.wc h4 { margin:0 0 10px; font-size:12px; font-weight:600; opacity:.75; text-transform:uppercase; letter-spacing:.05em; }
+.hrs { display:flex; gap:18px; overflow-x:auto; padding-bottom:4px; scrollbar-width:none; }
+.hrs::-webkit-scrollbar { display:none; }
+.hr { display:flex; flex-direction:column; align-items:center; gap:6px; min-width:42px; font-size:15px; }
+.hr small { font-size:12px; opacity:.85; white-space:nowrap; }
+.dy { display:flex; align-items:center; gap:8px; padding:9px 0; border-top:1px solid rgba(255,255,255,.2); font-size:16px; }
+.dy:first-of-type { border-top:none; }
+.dy .d { width:52px; } .dy .i { width:30px; text-align:center; } .dy .l { width:34px; text-align:right; opacity:.7; } .dy .h { width:34px; }
+.bar { flex:1; height:5px; border-radius:3px; background:rgba(255,255,255,.25); position:relative; }
+.bar i { position:absolute; top:0; bottom:0; border-radius:3px; background:linear-gradient(90deg,#7fd1ff,#ffd36b); }
+.grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:14px; }
+.grid .wc { margin-top:0; }
+.grid b { font-size:22px; font-weight:300; display:block; }
+.wx-err { text-align:center; padding:20px 10px; opacity:.9; }
+
+#panicZone { position:fixed; bottom:0; right:0; width:80px; height:80px; z-index:30; -webkit-tap-highlight-color:transparent; }
+
+/* Overlay Screens */
 #overlay { position:fixed; inset:0; background:#eaf4ff; color:#0f2a43; display:none; flex-direction:column; z-index:100; }
 #overlay.show { display:flex; }
+
 #pinScreen { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; padding:30px; }
+.pin-label { font-size:16px; font-weight:600; }
 .pin-dots { display:flex; gap:14px; }
 .pin-dot { width:14px; height:14px; border-radius:50%; border:2px solid #5b7794; background:transparent; }
 .pin-dot.filled { background:#2b8aef; border-color:#2b8aef; }
+.pin-error { color:#d9534f; font-size:13px; height:16px; text-align:center; }
 .keypad { display:grid; grid-template-columns:repeat(3,68px); gap:14px; }
-.keypad button { width:68px; height:68px; border-radius:50%; border:1px solid rgba(128,128,128,0.25); background:#fff; color:#0f2a43; font-size:22px; cursor:pointer; }
+.keypad button { width:68px; height:68px; border-radius:50%; border:1px solid rgba(128,128,128,.25); background:#fff; color:#0f2a43; font-size:22px; cursor:pointer; }
 .keypad button:active { background:#2b8aef; color:#fff; }
 .btn-ghost { background:none; border:none; color:#5b7794; font-size:13px; cursor:pointer; padding:8px; }
 
-/* Chat Screen */
-#chatScreen { flex:1; display:flex; flex-direction:column; height:100%; }
-.chat-hdr { display:flex; align-items:center; gap:10px; padding:16px; background:#fff; border-bottom:1px solid rgba(0,0,0,0.1); font-weight:600; }
-#messages { flex:1; overflow-y:auto; padding:16px; display:flex; flex-direction:column; gap:8px; }
-.bubble { max-width:76%; padding:10px 14px; border-radius:16px; font-size:15px; word-wrap:break-word; }
+#licenseScreen, #setupScreen { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; padding:30px; }
+.setup-title { font-size:17px; font-weight:600; }
+.hint { font-size:12px; color:#5b7794; text-align:center; max-width:260px; line-height:1.5; }
+#licenseInput, #roomInput { width:100%; max-width:260px; text-align:center; font-size:16px; padding:10px; border-radius:10px; border:1px solid rgba(128,128,128,.3); background:#fff; color:#0f2a43; outline:none; }
+.btn-primary { background:#2b8aef; color:#fff; border:none; border-radius:10px; padding:10px 22px; font-size:15px; cursor:pointer; font-weight:600; }
+
+#chatScreen { flex:1; display:flex; flex-direction:column; background:#eaf4ff; }
+.chat-hdr { display:flex; align-items:center; gap:10px; padding:12px 16px; background:#fff; border-bottom:1px solid rgba(128,128,128,.15); }
+.chat-hdr .hbtn { background:none; border:none; color:#2b8aef; font-size:15px; cursor:pointer; }
+.chat-hdr .title { font-weight:600; flex:1; font-size:15px; color:#0f2a43; }
+.chat-hdr .clearbtn { font-size:13px; color:#c0392b; background:none; border:none; cursor:pointer; }
+#status { font-size:12px; color:#5b7794; text-align:center; padding:4px 16px; min-height:22px; }
+#messages { flex:1; overflow-y:auto; padding:12px 16px; display:flex; flex-direction:column; gap:8px; }
+.bubble { max-width:76%; padding:9px 13px; border-radius:16px; font-size:15px; line-height:1.4; word-wrap:break-word; }
 .me { align-self:flex-end; background:#2b8aef; color:#fff; border-bottom-right-radius:4px; }
 .them { align-self:flex-start; background:#e7edf3; color:#0f2a43; border-bottom-left-radius:4px; }
-.chat-inp { display:flex; gap:8px; padding:12px; background:#fff; border-top:1px solid rgba(0,0,0,0.1); }
-#msgInput { flex:1; border:1px solid rgba(0,0,0,0.2); border-radius:20px; padding:10px 14px; font-size:15px; outline:none; }
-#sendBtn { background:#2b8aef; color:#fff; border:none; border-radius:20px; padding:10px 20px; font-weight:600; cursor:pointer; }
-#setupScreen, #licenseScreen, #galleryScreen { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; padding:30px; }
-input { padding:12px; font-size:16px; border-radius:8px; border:1px solid #ccc; width:100%; max-width:280px; text-align:center; }
-.btn-primary { background:#2b8aef; color:#fff; border:none; border-radius:8px; padding:12px 24px; font-size:16px; font-weight:600; cursor:pointer; }
+.ts { font-size:10px; opacity:.55; margin-top:2px; display:block; }
+.chat-inp { display:flex; gap:8px; padding:10px; background:#fff; border-top:1px solid rgba(128,128,128,.15); }
+#msgInput { flex:1; border:1px solid rgba(128,128,128,.3); border-radius:20px; padding:9px 14px; font-size:15px; background:#eaf4ff; color:#0f2a43; outline:none; }
+#sendBtn { background:#2b8aef; color:#fff; border:none; border-radius:20px; padding:9px 16px; font-size:14px; cursor:pointer; font-weight:600; }
+
+#galleryScreen { flex:1; display:flex; flex-direction:column; background:#fff; }
+.gal-hdr { display:flex; align-items:center; gap:10px; padding:14px 16px; background:#fff; border-bottom:1px solid rgba(128,128,128,.15); }
+.gal-grid { flex:1; overflow-y:auto; display:grid; grid-template-columns:repeat(3,1fr); gap:2px; padding:2px; }
+.gal-grid img { width:100%; aspect-ratio:1; object-fit:cover; cursor:pointer; }
+.gal-add { display:flex; align-items:center; justify-content:center; aspect-ratio:1; background:#e7edf3; color:#5b7794; font-size:30px; cursor:pointer; }
 </style>
 </head>
 <body>
+<div id="app">
 
 <div id="weather">
   <div class="wx-top">
-    <div class="wx-city" id="wxCity">Sullivan</div>
-    <div class="wx-temp" id="wxTemp">76°</div>
-    <div class="wx-cond" id="wxCond">Mostly Sunny</div>
+    <div class="wx-city" id="wxCity">Loading…</div>
+    <div class="wx-icon-el" id="wxIconEl">🌤️</div>
+    <div class="wx-temp" id="wxTemp">--°</div>
+    <div class="wx-cond" id="wxCond"></div>
+    <div class="wx-hilo" id="wxHilo"></div>
   </div>
-  <div class="card">
-    <h4>Hourly Forecast</h4>
-    <div class="row"><span>Now</span><span>🌤️</span><span>76°</span></div>
-    <div class="row"><span>2 PM</span><span>☀️</span><span>78°</span></div>
-    <div class="row"><span>3 PM</span><span>☀️</span><span>79°</span></div>
-  </div>
+  <div class="wc"><h4>Hourly Forecast</h4><div class="hrs" id="wxHrs"></div></div>
+  <div class="wc"><h4>10-Day Forecast</h4><div id="wxDays"></div></div>
+  <div class="grid" id="wxGrid"></div>
+  <div class="wx-err" id="wxErr"></div>
 </div>
+
+<div id="panicZone"></div>
 
 <div id="overlay">
   <div id="pinScreen">
-    <div style="font-weight:600; font-size:16px;">Enter code</div>
+    <div class="pin-label">Enter code</div>
     <div class="pin-dots" id="pinDots"></div>
-    <div id="pinError" style="color:red; height:15px; font-size:13px;"></div>
+    <div class="pin-error" id="pinError"></div>
     <div class="keypad" id="keypad"></div>
     <button class="btn-ghost" id="pinCancel">Back to weather</button>
   </div>
 
   <div id="licenseScreen" style="display:none;">
-    <div style="font-weight:600; font-size:17px;">Activate App</div>
-    <div style="font-size:13px; color:#5b7794; text-align:center;">Enter your license key from your purchase.</div>
+    <div class="setup-title">Activate App</div>
+    <div class="hint">Enter your license key to unlock SkyWatch.</div>
     <input id="licenseInput" placeholder="License Key">
+    <div class="hint" id="licenseError" style="color:#d9534f;min-height:20px;"></div>
     <button class="btn-primary" id="activateBtn">Activate</button>
     <button class="btn-ghost" id="cancelLicense">Back</button>
   </div>
 
   <div id="setupScreen" style="display:none;">
-    <div style="font-weight:600; font-size:17px;">Enter Secret Phrase</div>
-    <div style="font-size:13px; color:#5b7794; text-align:center;">Both people type the same phrase to connect.</div>
+    <div class="setup-title">Enter Secret Phrase</div>
+    <div class="hint">Both people type the exact same phrase to connect securely.</div>
     <input id="roomInput" placeholder="e.g. secret-phrase-xyz">
     <button class="btn-primary" id="joinBtn">Join Chat</button>
     <button class="btn-ghost" id="cancelSetup">Back</button>
@@ -90,10 +135,11 @@ input { padding:12px; font-size:16px; border-radius:8px; border:1px solid #ccc; 
 
   <div id="chatScreen" style="display:none;">
     <div class="chat-hdr">
-      <button class="btn-ghost" id="hideBtn" style="color:#2b8aef; font-size:15px;">‹ Hide</button>
-      <div style="flex:1;">Chat 🔒</div>
-      <button class="btn-ghost" id="clearBtn" style="color:red;">Clear</button>
+      <button class="hbtn" id="hideBtn">‹ Hide</button>
+      <div class="title">Chat 🔒 encrypted</div>
+      <button class="clearbtn" id="clearBtn">Clear</button>
     </div>
+    <div id="status"></div>
     <div id="messages"></div>
     <div class="chat-inp">
       <input id="msgInput" placeholder="Message…">
@@ -102,9 +148,21 @@ input { padding:12px; font-size:16px; border-radius:8px; border:1px solid #ccc; 
   </div>
 
   <div id="galleryScreen" style="display:none;">
-    <div class="chat-hdr"><button class="btn-ghost" id="galBack" style="color:#2b8aef;">‹ Back</button><div style="flex:1;">Photos</div></div>
-    <div style="flex:1; display:flex; align-items:center; justify-content:center; color:#5b7794;">No photos yet.</div>
+    <div class="gal-hdr">
+      <button id="galleryBack" class="btn-ghost" style="color:#2b8aef;">‹ Back</button>
+      <div style="font-weight:600; flex:1;">Photos</div>
+    </div>
+    <div class="gal-grid" id="galleryGrid"><div class="gal-add" id="galleryAdd">＋</div></div>
+    <input type="file" id="galleryFile" accept="image/*" multiple style="display:none;">
   </div>
+</div>
+
+<div id="lightbox">
+  <button class="lb-close" id="lbClose">✕</button>
+  <img id="lbImg" src="">
+  <button class="lb-del" id="lbDelete">Delete</button>
+</div>
+
 </div>
 
 <script>
@@ -117,14 +175,16 @@ const FIREBASE_CONFIG = {
   messagingSenderId: "714772362588",
   appId: "1:714772362588:web:30c96298c7548f76d57d99"
 };
+
 const PIN_LEN = 4;
+const LIC_KEY = '_sw_k';
+const CODES_KEY = '_sw_c';
 let roomId = null, roomKey = null;
-let CID = localStorage.getItem('_sw_id') || Math.random().toString(36).slice(2);
-localStorage.setItem('_sw_id', CID);
+let CID = localStorage.getItem('_sw_id'); if(!CID){ CID = Math.random().toString(36).slice(2); localStorage.setItem('_sw_id', CID); }
 
 try {
   firebase.initializeApp(FIREBASE_CONFIG);
-  firebase.auth().signInAnonymously().catch(() => {});
+  firebase.auth().signInAnonymously().catch(e => console.warn(e));
 } catch(e) {}
 
 const enc = new TextEncoder(), dec = new TextDecoder();
@@ -153,118 +213,6 @@ async function decryptMsg(key, m) {
 }
 
 const overlay = document.getElementById('overlay');
-function showOnly(el) {
-  ['pinScreen', 'licenseScreen', 'setupScreen', 'chatScreen', 'galleryScreen'].forEach(id => {
-    document.getElementById(id).style.display = (id === el) ? 'flex' : 'none';
-  });
-}
-
-let pinEntry = '';
-function renderDots() {
-  const c = document.getElementById('pinDots'); c.innerHTML = '';
-  for(let i=0; i<PIN_LEN; i++) {
-    const d = document.createElement('div'); d.className = 'pin-dot' + (i < pinEntry.length ? ' filled' : '');
-    c.appendChild(d);
-  }
-}
-
-const kp = document.getElementById('keypad');
-['1','2','3','4','5','6','7','8','9','','0','⌫'].forEach(k => {
-  const b = document.createElement('button');
-  b.textContent = k;
-  if(!k) { b.style.visibility = 'hidden'; kp.appendChild(b); return; }
-  b.addEventListener('click', () => {
-    if(k === '⌫') { pinEntry = pinEntry.slice(0,-1); renderDots(); return; }
-    if(pinEntry.length < PIN_LEN) pinEntry += k;
-    renderDots();
-    if(pinEntry.length === PIN_LEN) setTimeout(verifyPin, 50);
-  });
-  kp.appendChild(b);
-});
-renderDots();
-
-function verifyPin() {
-  let entry = pinEntry; pinEntry = ''; renderDots();
-  if(entry === '2588') {
-    if(!localStorage.getItem('_sw_k')) showOnly('licenseScreen');
-    else showOnly('setupScreen');
-  } else if(entry === '6969') {
-    showOnly('galleryScreen');
-  } else {
-    document.getElementById('pinError').textContent = 'Wrong code';
-    setTimeout(() => document.getElementById('pinError').textContent = '', 800);
-  }
-}
-
-function openApp() { overlay.classList.add('show'); showOnly('pinScreen'); }
-
-// Universal unlock: Tap weather temp 5 times quickly
-let taps = 0, timer = null;
-document.getElementById('wxTemp').addEventListener('click', () => {
-  if(++taps >= 5) { taps = 0; openApp(); }
-  clearTimeout(timer);
-  timer = setTimeout(() => { taps = 0; }, 1200);
-});
-
-// Hide buttons
-['pinCancel', 'cancelLicense', 'cancelSetup', 'hideBtn', 'galBack'].forEach(id => {
-  document.getElementById(id).addEventListener('click', () => overlay.classList.remove('show'));
-});
-
-document.getElementById('activateBtn').addEventListener('click', () => {
-  let k = document.getElementById('licenseInput').value.trim();
-  if(k.length < 4) return alert('Enter key');
-  localStorage.setItem('_sw_k', k);
-  showOnly('setupScreen');
-});
-
-let unsub = null;
-document.getElementById('joinBtn').addEventListener('click', async () => {
-  let phrase = document.getElementById('roomInput').value.trim().toLowerCase();
-  if(phrase.length < 4) return alert('Phrase too short');
-  let r = await deriveRoom(phrase);
-  roomId = r.roomId; roomKey = r.key;
-  showOnly('chatScreen');
-  connectChat();
-});
-
-function connectChat() {
-  if(unsub) unsub();
-  let ref = firebase.database().ref('rooms/' + roomId + '/messages');
-  let q = ref.orderByChild('ts').limitToLast(50);
-  q.on('value', async snap => {
-    let el = document.getElementById('messages'); el.innerHTML = '';
-    snap.forEach(ch => {
-      let m = ch.val();
-      decryptMsg(roomKey, m).then(p => {
-        let b = document.createElement('div');
-        b.className = 'bubble ' + (p.s === CID ? 'me' : 'them');
-        b.textContent = p.t;
-        el.appendChild(b);
-        el.scrollTop = el.scrollHeight;
-      }).catch(() => {});
-    });
-  });
-  unsub = () => q.off();
-}
-
-document.getElementById('sendBtn').addEventListener('click', sendMsg);
-document.getElementById('msgInput').addEventListener('keydown', e => { if(e.key === 'Enter') sendMsg(); });
-
-async function sendMsg() {
-  let inp = document.getElementById('msgInput');
-  let t = inp.value.trim();
-  if(!t || !roomKey) return;
-  inp.value = '';
-  let p = await encryptMsg(roomKey, { t, s: CID });
-  p.ts = firebase.database.ServerValue.TIMESTAMP;
-  firebase.database().ref('rooms/' + roomId + '/messages').push(p);
-}
-
-document.getElementById('clearBtn').addEventListener('click', () => {
-  if(roomId) firebase.database().ref('rooms/' + roomId + '/messages').remove();
-  document.getElementById('messages').innerHTML = '';
-});
-</script>
-</body>
-</html>
+const pinScreen = document.getElementById('pinScreen'), licenseScreen = document.getElementById('licenseScreen');
+const setupScreen = document.getElementById('setupScreen'), chatScreen = document.getElementById('chatScreen'), galleryScreen = document.getElementById('galleryScreen');
+function showOnly(el) { [pinScreen, licenseScreen, setupScreen, chatScreen, galleryScreen].forEach(s => s.style.display
