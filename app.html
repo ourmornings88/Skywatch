@@ -4,37 +4,20 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>SkyWatch Weather</title>
-
-<!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
-
 <style>
-:root {
-  --bg:#eaf4ff; --card:#fff; --text:#0f2a43; --sub:#5b7794;
-  --accent:#2b8aef; --me:#2b8aef; --me-t:#fff;
-  --them:#e7edf3; --them-t:#0f2a43;
-  padding-top:env(safe-area-inset-top,0px);
-  padding-bottom:env(safe-area-inset-bottom,0px);
-  box-sizing:border-box;
-}
-@media(prefers-color-scheme:dark){
-  :root:not([data-theme="light"]){
-    --bg:#0d1520;--card:#16202c;--text:#eaf2fb;--sub:#8fa3ba;
-    --them:#22303f;--them-t:#eaf2fb;
-  }
-}
+:root{--bg:#eaf4ff;--card:#fff;--text:#0f2a43;--sub:#5b7794;--accent:#2b8aef;--me:#2b8aef;--me-t:#fff;--them:#e7edf3;--them-t:#0f2a43;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);box-sizing:border-box;}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0d1520;--card:#16202c;--text:#eaf2fb;--sub:#8fa3ba;--them:#22303f;--them-t:#eaf2fb;}}
 html,body{height:100%;margin:0;scroll-padding-top:env(safe-area-inset-top,0px);touch-action:manipulation;}
 body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;overflow-x:hidden;-webkit-text-size-adjust:100%;}
 *{box-sizing:border-box;touch-action:manipulation;}
 #app{max-width:480px;margin:0 auto;min-height:100%;display:flex;flex-direction:column;position:relative;}
-
-/* Weather Screen */
-#wxBg{position:fixed;inset:0;z-index:-1;background:linear-gradient(#2f82e6,#7dbcf5);transition:background .5s;}
+#wxBg{position:fixed;inset:0;z-index:-1;background:linear-gradient(#2f82e6,#7dbcf5);}
 #weather{padding:calc(env(safe-area-inset-top,0px) + 24px) 16px 90px;color:#fff;user-select:none;flex:1;text-shadow:0 1px 3px rgba(0,0,0,.15);}
 .wx-top{text-align:center;}
-.wx-city{font-size:26px;font-weight:500;cursor:default;display:inline-block;padding:6px 14px;}
+.wx-city{font-size:26px;font-weight:500;display:inline-block;padding:6px 14px;}
 .wx-icon-el{font-size:54px;margin:8px 0;cursor:pointer;-webkit-touch-callout:none;}
 .wx-temp{font-size:88px;font-weight:200;line-height:1;margin:0;cursor:pointer;}
 .wx-cond{font-size:19px;opacity:.95;}
@@ -55,12 +38,11 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .grid b{font-size:26px;font-weight:300;display:block;}
 .wx-err{text-align:center;padding:20px 10px;opacity:.9;}
 
-#panicZone{position:fixed;bottom:0;right:0;width:80px;height:80px;z-index:30;-webkit-tap-highlight-color:transparent;}
-
-/* Overlay Screens */
-#overlay{position:fixed;inset:0;background:var(--bg);display:none;flex-direction:column;z-index:10;}
+#overlay{position:fixed;inset:0;background:var(--bg);display:none;flex-direction:column;z-index:10;padding-top:env(safe-area-inset-top,0px);}
 #overlay.show{display:flex;}
-
+/* Panic zone: top-centre, only active while overlay is open. Never covers Send. */
+#panicZone{display:none;position:fixed;top:0;left:50%;transform:translateX(-50%);width:110px;height:44px;margin-top:env(safe-area-inset-top,0px);z-index:30;-webkit-tap-highlight-color:transparent;}
+#overlay.show + #panicZone{display:block;}
 #pinScreen{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:30px;}
 .pin-label{font-size:16px;font-weight:600;}
 .pin-dots{display:flex;gap:14px;}
@@ -71,39 +53,35 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .keypad button{width:68px;height:68px;border-radius:50%;border:1px solid rgba(128,128,128,.25);background:var(--card);color:var(--text);font-size:22px;cursor:pointer;-webkit-tap-highlight-color:transparent;}
 .keypad button:active{background:var(--accent);color:#fff;}
 .btn-ghost{background:none;border:none;color:var(--sub);font-size:13px;cursor:pointer;padding:8px;}
-
-#licenseScreen, #setupScreen, #pinSetupScreen{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:30px;}
+#licenseScreen,#setupScreen,#pinSetupScreen{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:30px;}
 .setup-title{font-size:17px;font-weight:600;}
 .hint{font-size:12px;color:var(--sub);text-align:center;max-width:260px;line-height:1.5;}
-#licenseInput, #roomInput{width:100%;max-width:260px;text-align:center;font-size:16px;padding:10px;border-radius:10px;border:1px solid rgba(128,128,128,.3);background:var(--card);color:var(--text);outline:none;}
+#licenseInput,#roomInput{width:100%;max-width:260px;text-align:center;font-size:16px;padding:10px;border-radius:10px;border:1px solid rgba(128,128,128,.3);background:var(--card);color:var(--text);outline:none;}
 .btn-primary{background:var(--accent);color:#fff;border:none;border-radius:10px;padding:10px 22px;font-size:15px;cursor:pointer;font-weight:600;}
-
-#chatScreen{flex:1;display:flex;flex-direction:column;}
+#chatScreen{flex:1;display:flex;flex-direction:column;min-height:0;}
 .chat-hdr{display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--card);border-bottom:1px solid rgba(128,128,128,.15);}
 .chat-hdr .hbtn{background:none;border:none;color:var(--accent);font-size:15px;cursor:pointer;}
-.chat-hdr .title{font-weight:600;flex:1;font-size:15px;}
+.chat-hdr .title{font-weight:600;flex:1;font-size:15px;text-align:center;}
 .chat-hdr .clearbtn{font-size:13px;color:#c0392b;background:none;border:none;cursor:pointer;}
 #status{font-size:12px;color:var(--sub);text-align:center;padding:4px 16px;min-height:22px;}
-#messages{flex:1;overflow-y:auto;padding:12px 16px;display:flex;flex-direction:column;gap:8px;}
+#messages{flex:1;overflow-y:auto;padding:12px 16px;display:flex;flex-direction:column;gap:8px;min-height:0;}
 .bubble{max-width:76%;padding:9px 13px;border-radius:16px;font-size:15px;line-height:1.4;word-wrap:break-word;}
 .me{align-self:flex-end;background:var(--me);color:var(--me-t);border-bottom-right-radius:4px;}
 .them{align-self:flex-start;background:var(--them);color:var(--them-t);border-bottom-left-radius:4px;}
 .ts{font-size:10px;opacity:.55;margin-top:2px;display:block;}
-.chat-inp{display:flex;gap:8px;padding:10px;background:var(--card);border-top:1px solid rgba(128,128,128,.15);}
-#msgInput{flex:1;border:1px solid rgba(128,128,128,.3);border-radius:20px;padding:9px 14px;font-size:15px;background:var(--bg);color:var(--text);outline:none;}
+.chat-inp{display:flex;gap:8px;padding:10px;padding-bottom:calc(10px + env(safe-area-inset-bottom,0px));background:var(--card);border-top:1px solid rgba(128,128,128,.15);}
+#msgInput{flex:1;border:1px solid rgba(128,128,128,.3);border-radius:20px;padding:9px 14px;font-size:16px;background:var(--bg);color:var(--text);outline:none;}
 #sendBtn{background:var(--accent);color:#fff;border:none;border-radius:20px;padding:9px 16px;font-size:14px;cursor:pointer;font-weight:600;}
-
-#galleryScreen{flex:1;display:flex;flex-direction:column;}
+#galleryScreen{flex:1;display:flex;flex-direction:column;min-height:0;}
 .gal-hdr{display:flex;align-items:center;gap:10px;padding:14px 16px;background:var(--card);border-bottom:1px solid rgba(128,128,128,.15);}
 .gal-hdr button{background:none;border:none;color:var(--accent);font-size:15px;cursor:pointer;}
-.gal-grid{flex:1;overflow-y:auto;display:grid;grid-template-columns:repeat(3,1fr);gap:2px;padding:2px;}
+.gal-grid{flex:1;overflow-y:auto;display:grid;grid-template-columns:repeat(3,1fr);gap:2px;padding:2px;align-content:start;}
 .gal-grid img{width:100%;aspect-ratio:1;object-fit:cover;cursor:pointer;}
 .gal-add{display:flex;align-items:center;justify-content:center;aspect-ratio:1;background:var(--them);color:var(--sub);font-size:30px;cursor:pointer;}
-
 #lightbox{position:fixed;inset:0;background:rgba(0,0,0,.94);display:none;align-items:center;justify-content:center;flex-direction:column;gap:14px;z-index:20;}
 #lightbox.show{display:flex;}
 #lbImg{max-width:92%;max-height:78%;object-fit:contain;}
-.lb-close{position:absolute;top:16px;right:16px;color:#fff;font-size:26px;background:none;border:none;cursor:pointer;}
+.lb-close{position:absolute;top:calc(16px + env(safe-area-inset-top,0px));right:16px;color:#fff;font-size:26px;background:none;border:none;cursor:pointer;}
 .lb-del{color:#ff6b6b;background:rgba(255,255,255,.1);border:1px solid rgba(255,100,100,.3);border-radius:8px;padding:8px 20px;font-size:14px;cursor:pointer;}
 </style>
 </head>
@@ -119,30 +97,16 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
     <div class="wx-cond" id="wxCond">Mostly Sunny</div>
     <div class="wx-hilo" id="wxHilo">H:79°  L:56°</div>
   </div>
-  <div class="wc"><h4>Hourly Forecast</h4><div class="hrs" id="wxHrs">
-    <div class="hr"><small>Now</small><span style="font-size:24px">🌤️</span><span>76°</span></div>
-    <div class="hr"><small>2 PM</small><span style="font-size:24px">☀️</span><span>78°</span></div>
-    <div class="hr"><small>3 PM</small><span style="font-size:24px">☀️</span><span>79°</span></div>
-    <div class="hr"><small>4 PM</small><span style="font-size:24px">🌤️</span><span>77°</span></div>
-    <div class="hr"><small>5 PM</small><span style="font-size:24px">⛅</span><span>73°</span></div>
-  </div></div>
-  <div class="wc"><h4>10-Day Forecast</h4><div id="wxDays">
-    <div class="dy"><span class="d">Today</span><span class="i">🌤️</span><span class="l">56°</span><div class="bar"><i style="left:10%;right:20%"></i></div><span class="h">79°</span></div>
-    <div class="dy"><span class="d">Sun</span><span class="i">☀️</span><span class="l">54°</span><div class="bar"><i style="left:5%;right:25%"></i></div><span class="h">77°</span></div>
-    <div class="dy"><span class="d">Mon</span><span class="i">⛅</span><span class="l">58°</span><div class="bar"><i style="left:15%;right:30%"></i></div><span class="h">74°</span></div>
-    <div class="dy"><span class="d">Tue</span><span class="i">🌧️</span><span class="l">60°</span><div class="bar"><i style="left:20%;right:40%"></i></div><span class="h">68°</span></div>
-    <div class="dy"><span class="d">Wed</span><span class="i">🌤️</span><span class="l">55°</span><div class="bar"><i style="left:8%;right:28%"></i></div><span class="h">72°</span></div>
-  </div></div>
+  <div class="wc"><h4>Hourly Forecast</h4><div class="hrs" id="wxHrs"></div></div>
+  <div class="wc"><h4>10-Day Forecast</h4><div id="wxDays"></div></div>
   <div class="grid" id="wxGrid">
-    <div class="wc"><h4>Feels Like</h4><b id="wF">76°</b></div>
-    <div class="wc"><h4>Humidity</h4><b id="wH">45%</b></div>
-    <div class="wc"><h4>Wind</h4><b id="wW">6 mph</b></div>
-    <div class="wc"><h4>UV Index</h4><b id="wU">4</b></div>
+    <div class="wc"><h4>Feels Like</h4><b>76°</b></div>
+    <div class="wc"><h4>Humidity</h4><b>45%</b></div>
+    <div class="wc"><h4>Wind</h4><b>6 mph</b></div>
+    <div class="wc"><h4>UV Index</h4><b>4</b></div>
   </div>
   <div class="wx-err" id="wxErr"></div>
 </div>
-
-<div id="panicZone"></div>
 
 <div id="overlay">
   <div id="pinScreen">
@@ -156,7 +120,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
   <div id="licenseScreen" style="display:none;">
     <div class="setup-title">Activate App</div>
     <div class="hint">Enter your license key to unlock SkyWatch.</div>
-    <input id="licenseInput" placeholder="License Key">
+    <input id="licenseInput" placeholder="License Key" autocomplete="off">
     <div class="hint" id="licenseError" style="color:#d9534f;min-height:20px;"></div>
     <button class="btn-primary" id="activateBtn">Activate</button>
     <button class="btn-ghost" id="cancelLicense">Back</button>
@@ -172,8 +136,8 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 
   <div id="setupScreen" style="display:none;">
     <div class="setup-title">Enter Secret Phrase</div>
-    <div class="hint">Both people type the exact same phrase to connect securely.</div>
-    <input id="roomInput" placeholder="e.g. secret-phrase-xyz">
+    <div class="hint">Both people type the exact same phrase (8+ characters) to connect securely.</div>
+    <input id="roomInput" placeholder="e.g. secret-phrase-xyz" autocomplete="off" autocapitalize="off">
     <button class="btn-primary" id="joinBtn">Join Chat</button>
     <button class="btn-ghost" id="cancelSetup">Back</button>
   </div>
@@ -181,30 +145,31 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
   <div id="chatScreen" style="display:none;">
     <div class="chat-hdr">
       <button class="hbtn" id="hideBtn">‹ Hide</button>
-      <div class="title">Chat 🔒 encrypted</div>
+      <div class="title">Chat 🔒</div>
       <button class="clearbtn" id="clearBtn">Clear</button>
     </div>
     <div id="status"></div>
     <div id="messages"></div>
     <div class="chat-inp">
-      <input id="msgInput" placeholder="Message…">
+      <input id="msgInput" placeholder="Message…" autocomplete="off">
       <button id="sendBtn">Send</button>
     </div>
   </div>
 
   <div id="galleryScreen" style="display:none;">
     <div class="gal-hdr">
-      <button id="galleryBack" class="btn-ghost" style="color:#2b8aef;">‹ Back</button>
-      <div style="font-weight:600; flex:1;">Photos</div>
+      <button id="galleryBack">‹ Back</button>
+      <div style="font-weight:600;flex:1;">Photos</div>
     </div>
     <div class="gal-grid" id="galleryGrid"><div class="gal-add" id="galleryAdd">＋</div></div>
     <input type="file" id="galleryFile" accept="image/*" multiple style="display:none;">
   </div>
 </div>
+<div id="panicZone"></div>
 
 <div id="lightbox">
   <button class="lb-close" id="lbClose">✕</button>
-  <img id="lbImg" src="">
+  <img id="lbImg" src="" alt="">
   <button class="lb-del" id="lbDelete">Delete photo</button>
 </div>
 
@@ -221,21 +186,25 @@ const FIREBASE_CONFIG = {
   appId: "1:714772362588:web:30c96298c7548f76d57d99"
 };
 
-const PIN_LEN = 4;
-const LIC_KEY = '_sw_k';
-const CODES_KEY = '_sw_c';
+const PIN_LEN = 4, LIC_KEY = '_sw_k', CODES_KEY = '_sw_c', GALLERY_KEY = '_sw_g';
+const $ = id => document.getElementById(id);
 let roomId = null, roomKey = null;
-let CID = localStorage.getItem('_sw_id'); if(!CID){ CID = Math.random().toString(36).slice(2); localStorage.setItem('_sw_id', CID); }
+let CID = null;
+try { CID = localStorage.getItem('_sw_id'); } catch {}
+if (!CID) { CID = crypto.getRandomValues(new Uint32Array(4)).join('-'); try { localStorage.setItem('_sw_id', CID); } catch {} }
 
+let authReady = Promise.resolve();
 try {
   firebase.initializeApp(FIREBASE_CONFIG);
-  firebase.auth().signInAnonymously().catch(e => console.warn(e));
-} catch(e) {}
+  authReady = firebase.auth().signInAnonymously().catch(e => console.warn(e));
+} catch (e) {}
 
 const enc = new TextEncoder(), dec = new TextDecoder();
-const b64 = buf => btoa(String.fromCharCode(...new Uint8Array(buf)));
+const b64 = buf => { let s = ''; new Uint8Array(buf).forEach(b => s += String.fromCharCode(b)); return btoa(s); };
 const unb64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
 const hex = buf => [...new Uint8Array(buf)].map(x => x.toString(16).padStart(2, '0')).join('');
+const sha = async s => hex(await crypto.subtle.digest('SHA-256', enc.encode(s)));
+const hashPin = p => sha('skywatch/pin/v1|' + p);
 
 async function pbkdf2(secret, salt, iter, bits) {
   const k = await crypto.subtle.importKey('raw', enc.encode(secret), 'PBKDF2', false, ['deriveBits']);
@@ -257,217 +226,195 @@ async function decryptMsg(key, m) {
   return JSON.parse(dec.decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: unb64(m.iv) }, key, unb64(m.c))));
 }
 
-const overlay = document.getElementById('overlay');
-const pinScreen = document.getElementById('pinScreen'), licenseScreen = document.getElementById('licenseScreen');
-const setupScreen = document.getElementById('setupScreen'), chatScreen = document.getElementById('chatScreen'), galleryScreen = document.getElementById('galleryScreen'), pinSetupScreen = document.getElementById('pinSetupScreen');
-function showOnly(el) { [pinScreen, licenseScreen, setupScreen, chatScreen, galleryScreen, pinSetupScreen].forEach(s => { if(s) s.style.display = 'none'; }); if(el) el.style.display = 'flex'; }
+const overlay = $('overlay');
+const pinScreen = $('pinScreen'), licenseScreen = $('licenseScreen'), setupScreen = $('setupScreen'), chatScreen = $('chatScreen'), galleryScreen = $('galleryScreen'), pinSetupScreen = $('pinSetupScreen');
+const screens = [pinScreen, licenseScreen, setupScreen, chatScreen, galleryScreen, pinSetupScreen];
+function showOnly(el) { screens.forEach(s => s.style.display = 'none'); if (el) el.style.display = 'flex'; }
 
-let pinEntry = '';
-function renderDots() {
-  const c = document.getElementById('pinDots'); if(!c) return;
-  c.innerHTML = '';
-  for(let i=0; i<PIN_LEN; i++) {
-    const d = document.createElement('div'); d.className = 'pin-dot' + (i < pinEntry.length ? ' filled' : '');
+function hideOverlay() {
+  overlay.classList.remove('show');
+  $('lightbox').classList.remove('show');
+  $('lbImg').src = '';
+  pinEntry = ''; renderDots();
+  $('msgInput').blur();
+  showOnly(pinScreen);
+}
+
+function makeDots(containerId, getLen) {
+  const c = $(containerId); c.innerHTML = '';
+  for (let i = 0; i < PIN_LEN; i++) {
+    const d = document.createElement('div');
+    d.className = 'pin-dot' + (i < getLen() ? ' filled' : '');
     c.appendChild(d);
   }
 }
-
-(function buildKeypad() {
-  const kp = document.getElementById('keypad'); if(!kp) return;
-  kp.innerHTML = '';
+function makeKeypad(id, onDigit, onBack) {
+  const kp = $(id); kp.innerHTML = '';
   ['1','2','3','4','5','6','7','8','9','','0','⌫'].forEach(k => {
     const b = document.createElement('button');
     b.textContent = k;
-    if(!k) { b.style.visibility = 'hidden'; kp.appendChild(b); return; }
-    b.addEventListener('click', (e) => {
-      e.preventDefault();
-      if(k === '⌫') { pinEntry = pinEntry.slice(0,-1); renderDots(); return; }
-      if(pinEntry.length < PIN_LEN) pinEntry += k;
-      renderDots();
-      if(pinEntry.length === PIN_LEN) setTimeout(verifyPin, 50);
-    });
+    if (!k) { b.style.visibility = 'hidden'; kp.appendChild(b); return; }
+    b.addEventListener('click', e => { e.preventDefault(); k === '⌫' ? onBack() : onDigit(k); });
     kp.appendChild(b);
   });
-})();
+}
+
+/* ---- PIN entry ---- */
+let pinEntry = '';
+const renderDots = () => makeDots('pinDots', () => pinEntry.length);
+makeKeypad('keypad', k => {
+  if (pinEntry.length < PIN_LEN) pinEntry += k;
+  renderDots();
+  if (pinEntry.length === PIN_LEN) setTimeout(verifyPin, 50);
+}, () => { pinEntry = pinEntry.slice(0, -1); renderDots(); });
 renderDots();
 
-document.getElementById('panicZone').addEventListener('click', () => {
-  overlay.classList.remove('show');
-  pinEntry = ''; renderDots();
-});
+$('panicZone').addEventListener('click', hideOverlay);
 
-function verifyPin() {
-  let codes = JSON.parse(localStorage.getItem(CODES_KEY) || 'null');
-  let entry = pinEntry; pinEntry = ''; renderDots();
-  if(!codes) {
-    if(entry === '2588') { showOnly(licenseScreen); }
-    else if(entry === '6969') { showOnly(galleryScreen); renderGallery(); }
-    else { document.getElementById('pinError').textContent = 'Wrong code'; setTimeout(() => document.getElementById('pinError').textContent = '', 800); }
+function pinFail() {
+  $('pinError').textContent = 'Wrong code';
+  setTimeout(() => $('pinError').textContent = '', 800);
+}
+function readCodes() { try { return JSON.parse(localStorage.getItem(CODES_KEY) || 'null'); } catch { return null; } }
+
+async function verifyPin() {
+  const entry = pinEntry; pinEntry = ''; renderDots();
+  let codes = readCodes();
+  if (!codes) {
+    // First launch bootstrap codes (before personal codes are set)
+    if (entry === '2588') showOnly(licenseScreen);
+    else if (entry === '6969') { showOnly(galleryScreen); renderGallery(); }
+    else pinFail();
     return;
   }
-  if(entry === codes.r) {
-    if(!localStorage.getItem(LIC_KEY)) showOnly(licenseScreen);
-    else showOnly(setupScreen);
-  } else if(entry === codes.d) {
-    showOnly(galleryScreen); renderGallery();
-  } else {
-    document.getElementById('pinError').textContent = 'Wrong code';
-    setTimeout(() => document.getElementById('pinError').textContent = '', 800);
+  // Migrate legacy plaintext codes to hashes
+  if (codes.r.length === PIN_LEN && codes.d.length === PIN_LEN) {
+    codes = { r: await hashPin(codes.r), d: await hashPin(codes.d) };
+    try { localStorage.setItem(CODES_KEY, JSON.stringify(codes)); } catch {}
   }
+  const h = await hashPin(entry);
+  if (h === codes.r) {
+    showOnly(localStorage.getItem(LIC_KEY) ? setupScreen : licenseScreen);
+  } else if (h === codes.d) {
+    showOnly(galleryScreen); renderGallery();
+  } else pinFail();
 }
 
 function openAppTrigger() {
   overlay.classList.add('show');
   showOnly(pinScreen);
   pinEntry = ''; renderDots();
-  document.getElementById('pinError').textContent = '';
+  $('pinError').textContent = '';
 }
 
-// First-time PIN setup flow
+/* ---- First-time PIN setup ---- */
 let setupStep = 0, setupTmp = {}, setupEntry = '';
 const SETUP_LABELS = [
-  {title: 'Choose a 4-digit code', hint: 'This code will open your private chat from now on.'},
-  {title: 'Confirm your code', hint: 'Type your 4-digit code again to confirm.'},
-  {title: 'Choose a decoy code', hint: 'This code opens the fake photo gallery under pressure.'},
-  {title: 'Confirm decoy code', hint: 'Type your decoy code again to confirm.'}
+  { title: 'Choose a 4-digit code', hint: 'This code will open your private chat from now on.' },
+  { title: 'Confirm your code', hint: 'Type your 4-digit code again to confirm.' },
+  { title: 'Choose a decoy code', hint: 'This code opens the fake photo gallery under pressure.' },
+  { title: 'Confirm decoy code', hint: 'Type your decoy code again to confirm.' }
 ];
-function renderSetupDots() {
-  const c = document.getElementById('setupDots'); if(!c) return;
-  c.innerHTML = '';
-  for(let i=0; i<PIN_LEN; i++) {
-    const d = document.createElement('div'); d.className = 'pin-dot' + (i < setupEntry.length ? ' filled' : '');
-    c.appendChild(d);
-  }
+const renderSetupDots = () => makeDots('setupDots', () => setupEntry.length);
+function setStepLabels() {
+  $('pinSetupTitle').textContent = SETUP_LABELS[setupStep].title;
+  $('pinSetupHint').textContent = SETUP_LABELS[setupStep].hint;
 }
-(function buildSetupKeypad() {
-  const kp = document.getElementById('setupKeypad'); if(!kp) return;
-  kp.innerHTML = '';
-  ['1','2','3','4','5','6','7','8','9','','0','⌫'].forEach(k => {
-    const b = document.createElement('button');
-    b.textContent = k;
-    if(!k) { b.style.visibility = 'hidden'; kp.appendChild(b); return; }
-    b.addEventListener('click', (e) => {
-      e.preventDefault();
-      if(k === '⌫') { setupEntry = setupEntry.slice(0,-1); renderSetupDots(); return; }
-      if(setupEntry.length < PIN_LEN) setupEntry += k;
-      renderSetupDots();
-      if(setupEntry.length === PIN_LEN) setTimeout(handlePinSetupComplete, 50);
-    });
-    kp.appendChild(b);
-  });
-})();
+makeKeypad('setupKeypad', k => {
+  if (setupEntry.length < PIN_LEN) setupEntry += k;
+  renderSetupDots();
+  if (setupEntry.length === PIN_LEN) setTimeout(handlePinSetupComplete, 50);
+}, () => { setupEntry = setupEntry.slice(0, -1); renderSetupDots(); });
 function startPinSetupFlow() {
   setupEntry = ''; setupStep = 0; setupTmp = {};
-  showOnly(pinSetupScreen);
-  document.getElementById('pinSetupTitle').textContent = SETUP_LABELS[0].title;
-  document.getElementById('pinSetupHint').textContent = SETUP_LABELS[0].hint;
-  renderSetupDots();
+  showOnly(pinSetupScreen); setStepLabels(); renderSetupDots();
 }
-function handlePinSetupComplete() {
+function setupError(msg, backTo) {
+  const el = $('setupError'); el.textContent = msg;
+  setTimeout(() => {
+    setupEntry = ''; el.textContent = '';
+    if (backTo !== undefined) setupStep = backTo;
+    setStepLabels(); renderSetupDots();
+  }, 900);
+}
+async function handlePinSetupComplete() {
   const entry = setupEntry;
-  const errEl = document.getElementById('setupError');
-  const nextStep = () => {
-    setupStep++; setupEntry = ''; renderSetupDots();
-    document.getElementById('pinSetupTitle').textContent = SETUP_LABELS[setupStep].title;
-    document.getElementById('pinSetupHint').textContent = SETUP_LABELS[setupStep].hint;
-  };
-  if(setupStep === 0) { setupTmp.r = entry; return nextStep(); }
-  if(setupStep === 1) {
-    if(entry !== setupTmp.r) {
-      errEl.textContent = "Codes didn't match";
-      setTimeout(() => { setupEntry = ''; renderSetupDots(); errEl.textContent = ''; setupStep = 0; document.getElementById('pinSetupTitle').textContent = SETUP_LABELS[0].title; }, 900);
-      return;
-    }
-    return nextStep();
+  const next = () => { setupStep++; setupEntry = ''; setStepLabels(); renderSetupDots(); };
+  if (setupStep === 0) { setupTmp.r = entry; return next(); }
+  if (setupStep === 1) return entry !== setupTmp.r ? setupError("Codes didn't match", 0) : next();
+  if (setupStep === 2) {
+    if (entry === setupTmp.r) return setupError('Decoy must be different');
+    setupTmp.d = entry; return next();
   }
-  if(setupStep === 2) {
-    if(entry === setupTmp.r) {
-      errEl.textContent = "Decoy must be different";
-      setTimeout(() => { setupEntry = ''; renderSetupDots(); errEl.textContent = ''; }, 900);
-      return;
-    }
-    setupTmp.d = entry; return nextStep();
-  }
-  if(entry !== setupTmp.d) {
-    errEl.textContent = "Codes didn't match";
-    setTimeout(() => { setupEntry = ''; renderSetupDots(); errEl.textContent = ''; setupStep = 2; document.getElementById('pinSetupTitle').textContent = SETUP_LABELS[2].title; }, 900);
-    return;
-  }
-  localStorage.setItem(CODES_KEY, JSON.stringify({ r: setupTmp.r, d: setupTmp.d }));
+  if (entry !== setupTmp.d) return setupError("Codes didn't match", 2);
+  try { localStorage.setItem(CODES_KEY, JSON.stringify({ r: await hashPin(setupTmp.r), d: await hashPin(setupTmp.d) })); } catch {}
   setupTmp = {}; setupEntry = '';
   showOnly(setupScreen);
 }
 
-// Unlock methods
+/* ---- Unlock gestures ---- */
 let comboStep = 0, comboTimer = null;
-const weatherArea = document.getElementById('weather');
+const weatherArea = $('weather');
 function resetCombo() { comboStep = 0; clearTimeout(comboTimer); }
+function startComboTimer() { clearTimeout(comboTimer); comboTimer = setTimeout(resetCombo, 4000); }
 weatherArea.addEventListener('click', () => {
-  if(comboStep === 0) { comboStep = 1; startComboTimer(); }
-  else if(comboStep === 1) { comboStep = 2; startComboTimer(); }
-  else if(comboStep === 3) { comboStep = 4; startComboTimer(); }
-  else if(comboStep === 4) { comboStep = 5; startComboTimer(); }
-  else { resetCombo(); }
+  if (comboStep === 0) { comboStep = 1; startComboTimer(); }
+  else if (comboStep === 1) { comboStep = 2; startComboTimer(); }
+  else if (comboStep === 3) { comboStep = 4; startComboTimer(); }
+  else if (comboStep === 4) { comboStep = 5; startComboTimer(); }
+  else resetCombo();
 });
 let touchStartX = null;
 weatherArea.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; }, { passive: true });
 weatherArea.addEventListener('touchend', e => {
-  if(touchStartX === null) return;
+  if (touchStartX === null) return;
   const dx = e.changedTouches[0].clientX - touchStartX; touchStartX = null;
-  if(dx < -40) {
-    if(comboStep === 2) { comboStep = 3; startComboTimer(); }
-    else if(comboStep === 5) { resetCombo(); openAppTrigger(); }
-    else { resetCombo(); }
+  if (dx < -40) {
+    if (comboStep === 2) { comboStep = 3; startComboTimer(); }
+    else if (comboStep === 5) { resetCombo(); openAppTrigger(); }
+    else resetCombo();
   }
 });
-function startComboTimer() { clearTimeout(comboTimer); comboTimer = setTimeout(() => { resetCombo(); }, 4000); }
 
 let matrixStep = 0, matrixTimer = null;
+function resetMatrix() { matrixStep = 0; clearTimeout(matrixTimer); }
+function startMatrixTimer() { clearTimeout(matrixTimer); matrixTimer = setTimeout(resetMatrix, 3500); }
 document.addEventListener('touchstart', e => {
-  const touch = e.touches[0];
-  const x = touch.clientX, y = touch.clientY;
-  const w = window.innerWidth, h = window.innerHeight;
-  const isTopLeft = x < 90 && y < 90;
-  const isBottomRight = x > w - 90 && y > h - 90;
-  const isTopRight = x > w - 90 && y < 90;
-  if(matrixStep === 0 && isTopLeft) { matrixStep = 1; startMatrixTimer(); }
-  else if(matrixStep === 1 && isBottomRight) { matrixStep = 2; startMatrixTimer(); }
-  else if(matrixStep === 2 && isTopRight) { resetMatrix(); openAppTrigger(); }
-  else { if(!isTopLeft) resetMatrix(); }
-}, {passive: true});
-function startMatrixTimer() { clearTimeout(matrixTimer); matrixTimer = setTimeout(() => { resetMatrix(); }, 3500); }
+  if (overlay.classList.contains('show')) { resetMatrix(); return; }
+  const t = e.touches[0], w = window.innerWidth, h = window.innerHeight;
+  const tl = t.clientX < 90 && t.clientY < 90;
+  const br = t.clientX > w - 90 && t.clientY > h - 90;
+  const tr = t.clientX > w - 90 && t.clientY < 90;
+  if (matrixStep === 0 && tl) { matrixStep = 1; startMatrixTimer(); }
+  else if (matrixStep === 1 && br) { matrixStep = 2; startMatrixTimer(); }
+  else if (matrixStep === 2 && tr) { resetMatrix(); openAppTrigger(); }
+  else if (!tl) resetMatrix();
+}, { passive: true });
 
 let tempTaps = 0, tempTimer = null;
-document.getElementById('wxTemp').addEventListener('click', (e) => {
+$('wxTemp').addEventListener('click', e => {
   e.stopPropagation();
-  if(++tempTaps >= 5) { tempTaps = 0; openAppTrigger(); }
+  if (++tempTaps >= 5) { tempTaps = 0; openAppTrigger(); }
   clearTimeout(tempTimer);
   tempTimer = setTimeout(() => { tempTaps = 0; }, 1200);
 });
 
 let holdTimer = null;
-const iconEl = document.getElementById('wxIconEl');
-const startHold = () => { holdTimer = setTimeout(() => { openAppTrigger(); }, 2000); };
-const cancelHold = () => { clearTimeout(holdTimer); };
-iconEl.addEventListener('mousedown', startHold);
-iconEl.addEventListener('mouseup', cancelHold);
-iconEl.addEventListener('touchstart', startHold);
-iconEl.addEventListener('touchend', cancelHold);
+const iconEl = $('wxIconEl');
+const startHold = () => { clearTimeout(holdTimer); holdTimer = setTimeout(openAppTrigger, 2000); };
+const cancelHold = () => clearTimeout(holdTimer);
+['mousedown', 'touchstart'].forEach(ev => iconEl.addEventListener(ev, startHold, { passive: true }));
+['mouseup', 'touchend', 'touchcancel', 'mouseleave'].forEach(ev => iconEl.addEventListener(ev, cancelHold));
+iconEl.addEventListener('contextmenu', e => e.preventDefault());
 
-let lastMag = null, peakDelta = 0, GRAB_THRESHOLD = 26;
+/* Shake / grab to hide */
+let lastMag = null, GRAB_THRESHOLD = 26;
 function attachAccelerometer() {
   window.addEventListener('devicemotion', e => {
     const a = e.acceleration || e.accelerationIncludingGravity;
     if (!a || a.x == null) return;
-    const mag = Math.sqrt((a.x || 0) ** 2 + (a.y || 0) ** 2 + (a.z || 0) ** 2);
-    if (lastMag !== null) {
-      const delta = Math.abs(mag - lastMag);
-      if (delta > peakDelta) peakDelta = delta;
-      if (delta > GRAB_THRESHOLD && overlay.classList.contains('show')) {
-        overlay.classList.remove('show');
-        pinEntry = ''; renderDots();
-      }
-    }
+    const mag = Math.hypot(a.x || 0, a.y || 0, a.z || 0);
+    if (lastMag !== null && Math.abs(mag - lastMag) > GRAB_THRESHOLD && overlay.classList.contains('show')) hideOverlay();
     lastMag = mag;
   });
 }
@@ -475,145 +422,109 @@ if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.request
   window.addEventListener('click', () => {
     DeviceMotionEvent.requestPermission().then(s => { if (s === 'granted') attachAccelerometer(); }).catch(() => {});
   }, { once: true });
-} else {
-  attachAccelerometer();
-}
+} else attachAccelerometer();
 
-document.getElementById('cancelLicense').addEventListener('click', () => overlay.classList.remove('show'));
-document.getElementById('cancelSetup').addEventListener('click', () => overlay.classList.remove('show'));
-document.getElementById('hideBtn').addEventListener('click', () => overlay.classList.remove('show'));
-document.getElementById('pinCancel').addEventListener('click', () => overlay.classList.remove('show'));
-document.getElementById('galleryBack').addEventListener('click', () => overlay.classList.remove('show'));
+['cancelLicense', 'cancelSetup', 'hideBtn', 'pinCancel', 'galleryBack'].forEach(id => $(id).addEventListener('click', hideOverlay));
 
-document.getElementById('activateBtn').addEventListener('click', () => {
-  let key = document.getElementById('licenseInput').value.trim();
-  let err = document.getElementById('licenseError');
-  if(key.length < 4) { err.textContent = 'Please enter a valid license key.'; return; }
-  localStorage.setItem(LIC_KEY, key);
+/* ---- License (client-side check only) ---- */
+$('activateBtn').addEventListener('click', () => {
+  const key = $('licenseInput').value.trim(), err = $('licenseError');
+  if (key.length < 4) { err.textContent = 'Please enter a valid license key.'; return; }
+  try { localStorage.setItem(LIC_KEY, key); } catch {}
   err.textContent = '';
-  if(!localStorage.getItem(CODES_KEY)) { startPinSetupFlow(); }
-  else { showOnly(setupScreen); }
+  if (!readCodes()) startPinSetupFlow(); else showOnly(setupScreen);
 });
 
+/* ---- Chat ---- */
 let fbUnsubscribe = null;
-document.getElementById('joinBtn').addEventListener('click', async (e) => {
+const setStatus = t => { $('status').textContent = t || ''; };
+
+$('joinBtn').addEventListener('click', async e => {
   e.preventDefault();
-  let phrase = document.getElementById('roomInput').value.trim().toLowerCase();
-  if(phrase.length < 4) { alert('Phrase is too short'); return; }
-  let r = await deriveRoom(phrase);
+  const phrase = $('roomInput').value.trim().toLowerCase();
+  if (phrase.length < 8) { alert('Phrase must be at least 8 characters'); return; }
+  const r = await deriveRoom(phrase);
   roomId = r.roomId; roomKey = r.key;
   showOnly(chatScreen);
   connectChat();
 });
 
 function connectChat() {
-  if(fbUnsubscribe) fbUnsubscribe();
-  let ref = firebase.database().ref('rooms/' + roomId + '/messages');
-  let query = ref.orderByChild('ts').limitToLast(100);
-  let cb = async snap => {
-    let el = document.getElementById('messages'); el.innerHTML = '';
-    snap.forEach(ch => {
-      let m = ch.val();
-      decryptMsg(roomKey, m).then(p => {
-        let b = document.createElement('div');
-        b.className = 'bubble ' + (p.s === CID ? 'me' : 'them');
-        b.textContent = p.t;
-        el.appendChild(b);
-        el.scrollTop = el.scrollHeight;
-      }).catch(() => {});
+  if (fbUnsubscribe) fbUnsubscribe();
+  setStatus('Connecting…');
+  const query = firebase.database().ref('rooms/' + roomId + '/messages').orderByChild('ts').limitToLast(100);
+  let seq = 0;
+  const cb = async snap => {
+    const my = ++seq, items = [];
+    snap.forEach(ch => { items.push(ch.val()); });
+    const out = await Promise.all(items.map(m => decryptMsg(roomKey, m).then(p => ({ p, ts: m.ts })).catch(() => null)));
+    if (my !== seq) return;
+    const el = $('messages'); el.innerHTML = '';
+    out.filter(Boolean).forEach(({ p, ts }) => {
+      const b = document.createElement('div');
+      b.className = 'bubble ' + (p.s === CID ? 'me' : 'them');
+      b.textContent = p.t;
+      if (ts) {
+        const s = document.createElement('span'); s.className = 'ts';
+        s.textContent = new Date(ts).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+        b.appendChild(s);
+      }
+      el.appendChild(b);
     });
+    el.scrollTop = el.scrollHeight;
+    setStatus('');
   };
-  query.on('value', cb);
+  const errCb = err => setStatus('Connection error: ' + (err && err.code || 'unknown'));
+  query.on('value', cb, errCb);
   fbUnsubscribe = () => query.off('value', cb);
 }
 
-document.getElementById('sendBtn').addEventListener('click', (e) => { e.preventDefault(); sendMessage(); });
-document.getElementById('msgInput').addEventListener('keydown', e => { if(e.key === 'Enter') { e.preventDefault(); sendMessage(); } });
+$('sendBtn').addEventListener('click', e => { e.preventDefault(); sendMessage(); });
+$('msgInput').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); sendMessage(); } });
 
 async function sendMessage() {
-  let inp = document.getElementById('msgInput');
-  let text = inp.value.trim();
-  if(!text || !roomKey) return;
-  inp.value = '';
-  let payload = await encryptMsg(roomKey, { t: text, s: CID });
-  payload.ts = firebase.database.ServerValue.TIMESTAMP;
-  firebase.database().ref('rooms/' + roomId + '/messages').push(payload);
+  const inp = $('msgInput'), text = inp.value.trim();
+  if (!text || !roomKey) return;
+  inp.value = ''; inp.focus();
+  try {
+    await authReady;
+    const payload = await encryptMsg(roomKey, { t: text, s: CID });
+    payload.ts = firebase.database.ServerValue.TIMESTAMP;
+    await firebase.database().ref('rooms/' + roomId + '/messages').push(payload);
+  } catch (err) {
+    inp.value = text;
+    setStatus('Send failed: ' + (err && err.code || 'network'));
+  }
 }
 
+$('clearBtn').addEventListener('click', async () => {
+  if (!roomId || !confirm('Delete all messages in this chat for everyone?')) return;
+  try { await firebase.database().ref('rooms/' + roomId + '/messages').remove(); }
+  catch (err) { setStatus('Clear failed: ' + (err && err.code || 'network')); }
+});
+
+/* ---- Decoy gallery ---- */
 let photos = [], lbId = null;
 function loadPhotos() { try { photos = JSON.parse(localStorage.getItem(GALLERY_KEY) || '[]'); } catch { photos = []; } }
-function savePhotos() { try { localStorage.setItem(GALLERY_KEY, JSON.stringify(photos)); } catch {} }
+function savePhotos() {
+  try { localStorage.setItem(GALLERY_KEY, JSON.stringify(photos)); return true; }
+  catch { alert('Storage is full. Delete some photos.'); return false; }
+}
 function renderGallery() {
   loadPhotos();
-  let grid = document.getElementById('galleryGrid');
+  const grid = $('galleryGrid'), add = $('galleryAdd');
   grid.querySelectorAll('img').forEach(n => n.remove());
-  let add = document.getElementById('galleryAdd');
   photos.forEach(p => {
-    let img = document.createElement('img'); img.src = p.src;
-    img.addEventListener('click', () => { lbId = p.id; document.getElementById('lbImg').src = p.src; document.getElementById('lightbox').classList.add('show'); });
+    const img = document.createElement('img'); img.src = p.src; img.alt = '';
+    img.addEventListener('click', () => { lbId = p.id; $('lbImg').src = p.src; $('lightbox').classList.add('show'); });
     grid.insertBefore(img, add);
   });
 }
-document.getElementById('galleryAdd').addEventListener('click', () => document.getElementById('galleryFile').click());
-document.getElementById('galleryFile').addEventListener('change', e => {
-  const files = Array.from(e.target.files);
-  files.forEach(file => {
-    let reader = new FileReader();
-    reader.onload = ev => {
-      photos.push({ id: Math.random() + '_' + Date.now(), src: ev.target.result });
-      savePhotos(); renderGallery();
-    };
-    reader.readAsDataURL(file);
-  });
-});
-document.getElementById('lbClose').addEventListener('click', () => document.getElementById('lightbox').classList.remove('show'));
-document.getElementById('lbDelete').addEventListener('click', () => {
-  photos = photos.filter(p => p.id !== lbId);
-  savePhotos(); document.getElementById('lightbox').classList.remove('show'); renderGallery();
-});
-
-const WC=[[[0],'☀️','🌙','Clear'],[[1],'🌤️','🌙','Mostly Clear'],[[2],'⛅','☁️','Partly Cloudy'],[[3],'☁️','☁️','Overcast'],[[45,48],'🌫️','🌫️','Fog'],[[51,53,55,56,57],'🌦️','🌧️','Drizzle'],[[61,63,65,66,67,80,81,82],'🌧️','🌧️','Rain'],[[71,73,75,77,85,86],'🌨️','🌨️','Snow'],[[95,96,99],'⛈️','⛈️','Thunderstorms']];
-const wxInfo=(c,d)=>{const r=WC.find(x=>x[0].includes(c))||WC[2];return [d?r[1]:r[2],r[3]];};
-const $=id=>document.getElementById(id), T=n=>Math.round(n)+'°';
-const hr12=s=>{const h=+s.slice(11,13);return (h%12||12)+(h<12?' AM':' PM');};
-const tm=s=>{const h=+s.slice(11,13);return (h%12||12)+':'+s.slice(14,16)+(h<12?' AM':' PM');};
-
-async function getLoc(){
-  try{const c=JSON.parse(localStorage.getItem('_sw_loc'));if(c&&Date.now()-c.t<864e5)return c;}catch{}
-  const pos=await new Promise(r=>navigator.geolocation?navigator.geolocation.getCurrentPosition(p=>r(p.coords),()=>r(null),{timeout:8000}):r(null));
-  let loc;
-  if(pos){
-    let name='My Location';
-    try{const g=await (await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${pos.latitude}&longitude=${pos.longitude}&localityLanguage=en`)).json();name=g.city||g.locality||name;}catch{}
-    loc={lat:pos.latitude,lon:pos.longitude,name};
-  }else{
-    const g=(await (await fetch('https://api.open-meteo.com/v1/search?name=Sullivan&count=1')).json()).results[0];
-    loc={lat:g.latitude,lon:g.longitude,name:g.name};
-  }
-  loc.t=Date.now();
-  try{localStorage.setItem('_sw_loc',JSON.stringify(loc));}catch{}
-  return loc;
-}
-
-async function loadWeather(){
-  try{
-    const L=await getLoc();
-    const u=`https://api.open-meteo.com/v1/forecast?latitude=${L.lat}&longitude=${L.lon}&current=temperature_2m,apparent_temperature,relative_humidity_2m,is_day,weather_code,wind_speed_10m,surface_pressure&hourly=temperature_2m,weather_code,is_day,uv_index,visibility&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=auto&forecast_days=10`;
-    const w=await (await fetch(u)).json(), c=w.current, h=w.hourly, d=w.daily;
-    $('wxCity').textContent=L.name; $('wxTemp').textContent=T(c.temperature_2m);
-    $('wxCond').textContent=wxInfo(c.weather_code,c.is_day)[1];
-    $('wxHilo').textContent=`H:${T(d.temperature_2m_max[0])}  L:${T(d.temperature_2m_min[0])}`;
-    const now=c.time.slice(0,13); let i=h.time.findIndex(t=>t.slice(0,13)>=now); if(i<0)i=0;
-    $('wxHrs').innerHTML=h.time.slice(i,i+24).map((t,k)=>{const j=i+k;return `<div class="hr"><small>${k?hr12(t):'Now'}</small><span style="font-size:24px">${wxInfo(h.weather_code[j],h.is_day[j])[0]}</span><span>${T(k?h.temperature_2m[j]:c.temperature_2m)}</span></div>`;}).join('');
-    const mn=Math.min(...d.temperature_2m_min), mx=Math.max(...d.temperature_2m_max), rg=(mx-mn)||1;
-    $('wxDays').innerHTML=d.time.map((t,k)=>{const lo=d.temperature_2m_min[k],hi=d.temperature_2m_max[k];return `<div class="dy"><span class="d">${k?new Date(t+'T12:00').toLocaleDateString(undefined,{weekday:'short'}):'Today'}</span><span class="i">${wxInfo(d.weather_code[k],1)[0]}</span><span class="l">${T(lo)}</span><div class="bar"><i style="left:${(lo-mn)/rg*100}%;right:${100-(hi-mn)/rg*100}%"></i></div><span class="h">${T(hi)}</span></div>`;}).join('');
-    const G=[['Feels Like',T(c.apparent_temperature)],['Humidity',Math.round(c.relative_humidity_2m)+'%'],['Wind',Math.round(c.wind_speed_10m)+' mph'],['UV Index',Math.round(h.uv_index[i]||0)],['Sunrise',tm(d.sunrise[0])],['Sunset',tm(d.sunset[0])],['Pressure',(c.surface_pressure*0.02953).toFixed(2)+' inHg'],['Visibility',Math.min(10,Math.round((h.visibility[i]||16093)/1609))+' mi']];
-    $('wxGrid').innerHTML=G.map(g=>`<div class="wc"><h4>${g[0]}</h4><b>${g[1]}</b></div>`).join('');
-  }catch(e){
-    $('wxErr').textContent='Unable to load weather.';
-  }
-}
-loadWeather();
-</script>
-</body>
-</html>
+function compress(file) {
+  return new Promise((res, rej) => {
+    const url = URL.createObjectURL(file), im = new Image();
+    im.onload = () => {
+      const s = Math.min(1, 1000 / Math.max(im.width, im.height));
+      const c = document.createElement('canvas'); c.width = im.width * s; c.height = im.height * s;
+      c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url); r
