@@ -40,7 +40,6 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 
 #overlay{position:fixed;inset:0;background:var(--bg);display:none;flex-direction:column;z-index:10;padding-top:env(safe-area-inset-top,0px);}
 #overlay.show{display:flex;}
-/* Panic zone: top-centre, only active while overlay is open. Never covers Send. */
 #panicZone{display:none;position:fixed;top:0;left:50%;transform:translateX(-50%);width:110px;height:44px;margin-top:env(safe-area-inset-top,0px);z-index:30;-webkit-tap-highlight-color:transparent;}
 #overlay.show + #panicZone{display:block;}
 #pinScreen{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:30px;}
@@ -281,13 +280,11 @@ async function verifyPin() {
   const entry = pinEntry; pinEntry = ''; renderDots();
   let codes = readCodes();
   if (!codes) {
-    // First launch bootstrap codes (before personal codes are set)
     if (entry === '2588') showOnly(licenseScreen);
     else if (entry === '6969') { showOnly(galleryScreen); renderGallery(); }
     else pinFail();
     return;
   }
-  // Migrate legacy plaintext codes to hashes
   if (codes.r.length === PIN_LEN && codes.d.length === PIN_LEN) {
     codes = { r: await hashPin(codes.r), d: await hashPin(codes.d) };
     try { localStorage.setItem(CODES_KEY, JSON.stringify(codes)); } catch {}
@@ -522,9 +519,85 @@ function renderGallery() {
 }
 function compress(file) {
   return new Promise((res, rej) => {
-    const url = URL.createObjectURL(file), im = new Image();
-    im.onload = () => {
-      const s = Math.min(1, 1000 / Math.max(im.width, im.height));
-      const c = document.createElement('canvas'); c.width = im.width * s; c.height = im.height * s;
-      c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
-      URL.revokeObjectURL(url); r
+    const fr = new FileReader();
+    fr.onerror = () => rej();
+    fr.onload = () => {
+      const im = new Image();
+      im.onload = () => {
+        const s = Math.min(1, 1000 / Math.max(im.width, im.height));
+        const c = document.createElement('canvas'); c.width = Math.round(im.width * s); c.height = Math.round(im.height * s);
+        c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
+        res(c.toDataURL('image/jpeg', 0.8));
+      };
+      im.onerror = () => rej();
+      im.src = fr.result;
+    };
+    fr.readAsDataURL(file);
+  });
+}
+$('galleryAdd').addEventListener('click', () => $('galleryFile').click());
+$('galleryFile').addEventListener('change', async e => {
+  loadPhotos();
+  let failed = 0;
+  for (const f of Array.from(e.target.files)) {
+    try { photos.push({ id: Date.now() + '_' + Math.random().toString(36).slice(2), src: await compress(f) }); } catch { failed++; }
+  }
+  e.target.value = '';
+  savePhotos(); renderGallery();
+  if (failed) alert(failed + ' photo(s) could not be added (unsupported format).');
+});
+$('lbClose').addEventListener('click', () => $('lightbox').classList.remove('show'));
+$('lbDelete').addEventListener('click', () => {
+  loadPhotos();
+  photos = photos.filter(p => p.id !== lbId);
+  savePhotos(); $('lightbox').classList.remove('show'); renderGallery();
+});
+
+/* ---- Weather ---- */
+const WC = [[[0],'☀️','🌙','Clear'],[[1],'🌤️','🌙','Mostly Clear'],[[2],'⛅','☁️','Partly Cloudy'],[[3],'☁️','☁️','Overcast'],[[45,48],'🌫️','🌫️','Fog'],[[51,53,55,56,57],'🌦️','🌧️','Drizzle'],[[61,63,65,66,67,80,81,82],'🌧️','🌧️','Rain'],[[71,73,75,77,85,86],'🌨️','🌨️','Snow'],[[95,96,99],'⛈️','⛈️','Thunderstorms']];
+const wxInfo = (c, d) => { const r = WC.find(x => x[0].includes(c)) || WC[2]; return [d ? r[1] : r[2], r[3]]; };
+const T = n => Math.round(n) + '°';
+const hr12 = s => { const h = +s.slice(11, 13); return (h % 12 || 12) + (h < 12 ? ' AM' : ' PM'); };
+const tm = s => { const h = +s.slice(11, 13); return (h % 12 || 12) + ':' + s.slice(14, 16) + (h < 12 ? ' AM' : ' PM'); };
+
+async function getLoc() {
+  try { const c = JSON.parse(localStorage.getItem('_sw_loc')); if (c && Date.now() - c.t < 864e5) return c; } catch {}
+  const pos = await new Promise(r => navigator.geolocation ? navigator.geolocation.getCurrentPosition(p => r(p.coords), () => r(null), { timeout: 8000 }) : r(null));
+  let loc;
+  if (pos) {
+    let name = 'My Location';
+    try { const g = await (await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${pos.latitude}&longitude=${pos.longitude}&localityLanguage=en`)).json(); name = g.city || g.locality || name; } catch {}
+    loc = { lat: pos.latitude, lon: pos.longitude, name };
+  } else {
+    const g = (await (await fetch('https://geocoding-api.open-meteo.com/v1/search?name=Sullivan&count=1')).json()).results[0];
+    loc = { lat: g.latitude, lon: g.longitude, name: g.name };
+  }
+  loc.t = Date.now();
+  try { localStorage.setItem('_sw_loc', JSON.stringify(loc)); } catch {}
+  return loc;
+}
+
+async function loadWeather() {
+  try {
+    const L = await getLoc();
+    const u = `https://api.open-meteo.com/v1/forecast?latitude=${L.lat}&longitude=${L.lon}&current=temperature_2m,apparent_temperature,relative_humidity_2m,is_day,weather_code,wind_speed_10m,surface_pressure&hourly=temperature_2m,weather_code,is_day,uv_index,visibility&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=auto&forecast_days=10`;
+    const w = await (await fetch(u)).json(), c = w.current, h = w.hourly, d = w.daily;
+    $('wxCity').textContent = L.name; $('wxTemp').textContent = T(c.temperature_2m);
+    $('wxIconEl').textContent = wxInfo(c.weather_code, c.is_day)[0];
+    $('wxCond').textContent = wxInfo(c.weather_code, c.is_day)[1];
+    $('wxHilo').textContent = `H:${T(d.temperature_2m_max[0])}  L:${T(d.temperature_2m_min[0])}`;
+    const now = c.time.slice(0, 13); let i = h.time.findIndex(t => t.slice(0, 13) >= now); if (i < 0) i = 0;
+    $('wxHrs').innerHTML = h.time.slice(i, i + 24).map((t, k) => { const j = i + k; return `<div class="hr"><small>${k ? hr12(t) : 'Now'}</small><span style="font-size:24px">${wxInfo(h.weather_code[j], h.is_day[j])[0]}</span><span>${T(k ? h.temperature_2m[j] : c.temperature_2m)}</span></div>`; }).join('');
+    const mn = Math.min(...d.temperature_2m_min), mx = Math.max(...d.temperature_2m_max), rg = (mx - mn) || 1;
+    $('wxDays').innerHTML = d.time.map((t, k) => { const lo = d.temperature_2m_min[k], hi = d.temperature_2m_max[k]; return `<div class="dy"><span class="d">${k ? new Date(t + 'T12:00').toLocaleDateString(undefined, { weekday: 'short' }) : 'Today'}</span><span class="i">${wxInfo(d.weather_code[k], 1)[0]}</span><span class="l">${T(lo)}</span><div class="bar"><i style="left:${(lo - mn) / rg * 100}%;right:${100 - (hi - mn) / rg * 100}%"></i></div><span class="h">${T(hi)}</span></div>`; }).join('');
+    const G = [['Feels Like', T(c.apparent_temperature)], ['Humidity', Math.round(c.relative_humidity_2m) + '%'], ['Wind', Math.round(c.wind_speed_10m) + ' mph'], ['UV Index', Math.round(h.uv_index[i] || 0)], ['Sunrise', tm(d.sunrise[0])], ['Sunset', tm(d.sunset[0])], ['Pressure', (c.surface_pressure * 0.02953).toFixed(2) + ' inHg'], ['Visibility', Math.min(10, Math.round((h.visibility[i] || 16093) / 1609)) + ' mi']];
+    $('wxGrid').innerHTML = G.map(g => `<div class="wc"><h4>${g[0]}</h4><b>${g[1]}</b></div>`).join('');
+    $('wxErr').textContent = '';
+  } catch (e) {
+    $('wxErr').textContent = 'Unable to load weather.';
+  }
+}
+loadWeather();
+</script>
+</body>
+</html>
