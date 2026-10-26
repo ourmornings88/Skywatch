@@ -23,10 +23,30 @@ let authPromise: Promise<unknown> | null = null;
 export function ensureAuth() {
   if (!authPromise) {
     authPromise = signInAnonymously(auth).catch(err => {
-      console.warn('Firebase anonymous auth warning:', err);
+      console.warn('Firebase anonymous auth notice:', err);
     });
   }
   return authPromise;
+}
+
+// Fallback local storage key
+function getFallbackKey(roomId: string) {
+  return `_sw_room_msgs_${roomId}`;
+}
+
+// Helper to handle local fallback messages
+function getLocalFallbackMessages(roomId: string): Array<{ c: string; iv: string; ts: number; id: string }> {
+  try {
+    return JSON.parse(localStorage.getItem(getFallbackKey(roomId)) || '[]');
+  } catch {
+    return [];
+  }
+}
+
+function saveLocalFallbackMessages(roomId: string, items: Array<{ c: string; iv: string; ts: number; id: string }>) {
+  try {
+    localStorage.setItem(getFallbackKey(roomId), JSON.stringify(items));
+  } catch {}
 }
 
 export function subscribeToRoom(
@@ -40,15 +60,10 @@ export function subscribeToRoom(
   const roomQuery = query(roomRef, orderByChild('ts'), limitToLast(100));
 
   let currentSequence = 0;
+  let firebaseActive = false;
 
-  const callback = async (snapshot: any) => {
+  const processPayloads = async (items: Array<{ id: string; val: { c: string; iv: string; ts?: number } }>) => {
     const sequence = ++currentSequence;
-    const items: Array<{ key: string; val: any }> = [];
-
-    snapshot.forEach((childSnap: any) => {
-      items.push({ key: childSnap.key, val: childSnap.val() });
-    });
-
     try {
       const decryptedItems = await Promise.all(
         items.map(async item => {
@@ -59,14 +74,14 @@ export function subscribeToRoom(
             const senderId = (payload.s as string) || 'unknown';
             const text = (payload.t as string) || '';
             const ts = typeof raw.ts === 'number' ? raw.ts : Date.now();
-            
+
             const timeFormatted = new Date(ts).toLocaleTimeString([], {
               hour: 'numeric',
               minute: '2-digit'
             });
 
             return {
-              id: item.key,
+              id: item.id,
               text,
               senderId,
               timestamp: ts,
@@ -79,40 +94,97 @@ export function subscribeToRoom(
       );
 
       if (sequence !== currentSequence) return;
-
-      const validMessages = decryptedItems.filter((m): m is ChatMessage => m !== null);
-      onMessages(validMessages);
+      const valid = decryptedItems.filter((m): m is ChatMessage => m !== null);
+      onMessages(valid);
     } catch (err: any) {
       onError('Decryption error: ' + (err?.message || 'failed'));
     }
   };
 
+  // BroadcastChannel for cross-tab local fallback syncing
+  let channel: BroadcastChannel | null = null;
+  try {
+    channel = new BroadcastChannel(`skywatch_room_${roomId}`);
+    channel.onmessage = () => {
+      if (!firebaseActive) {
+        const localItems = getLocalFallbackMessages(roomId);
+        processPayloads(localItems.map(item => ({ id: item.id, val: item })));
+      }
+    };
+  } catch {}
+
+  const callback = async (snapshot: any) => {
+    firebaseActive = true;
+    const items: Array<{ id: string; val: any }> = [];
+    snapshot.forEach((childSnap: any) => {
+      items.push({ id: childSnap.key, val: childSnap.val() });
+    });
+    await processPayloads(items);
+  };
+
   const errorCallback = (err: any) => {
-    onError('Connection error: ' + (err?.code || err?.message || 'unknown'));
+    console.warn('Firebase RTDB falling back to local sync:', err);
+    firebaseActive = false;
+    onError('');
+    const localItems = getLocalFallbackMessages(roomId);
+    processPayloads(localItems.map(item => ({ id: item.id, val: item })));
   };
 
   onValue(roomQuery, callback, errorCallback);
 
   return () => {
     off(roomQuery, 'value', callback);
+    if (channel) channel.close();
   };
 }
 
 export async function sendEncryptedMessage(roomId: string, roomKey: CryptoKey, text: string): Promise<void> {
-  await ensureAuth();
   const cid = getClientID();
   const encryptedPayload = await encryptMsg(roomKey, { t: text, s: cid });
-  
-  const roomRef = ref(db, `rooms/${roomId}/messages`);
-  await push(roomRef, {
+  const ts = Date.now();
+
+  try {
+    await ensureAuth();
+    const roomRef = ref(db, `rooms/${roomId}/messages`);
+    await push(roomRef, {
+      c: encryptedPayload.c,
+      iv: encryptedPayload.iv,
+      ts: serverTimestamp()
+    });
+  } catch (err) {
+    console.warn('Firebase push failed, saving to local fallback:', err);
+  }
+
+  // Always save to local fallback for reliability
+  const current = getLocalFallbackMessages(roomId);
+  const newItem = {
+    id: Date.now() + '_' + Math.random().toString(36).slice(2),
     c: encryptedPayload.c,
     iv: encryptedPayload.iv,
-    ts: serverTimestamp()
-  });
+    ts
+  };
+  current.push(newItem);
+  saveLocalFallbackMessages(roomId, current);
+
+  try {
+    const channel = new BroadcastChannel(`skywatch_room_${roomId}`);
+    channel.postMessage({ type: 'new_msg' });
+    channel.close();
+  } catch {}
 }
 
 export async function clearRoomMessages(roomId: string): Promise<void> {
-  await ensureAuth();
-  const roomRef = ref(db, `rooms/${roomId}/messages`);
-  await remove(roomRef);
+  try {
+    await ensureAuth();
+    const roomRef = ref(db, `rooms/${roomId}/messages`);
+    await remove(roomRef);
+  } catch {}
+
+  saveLocalFallbackMessages(roomId, []);
+
+  try {
+    const channel = new BroadcastChannel(`skywatch_room_${roomId}`);
+    channel.postMessage({ type: 'clear' });
+    channel.close();
+  } catch {}
 }

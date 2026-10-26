@@ -4,11 +4,7 @@ import { WeatherData } from '../types';
 import { useStealthTriggers } from '../hooks/useStealthTriggers';
 import { Overlay } from './Overlay';
 
-interface WeatherAppProps {
-  onBackToLanding?: () => void;
-}
-
-export const WeatherApp: React.FC<WeatherAppProps> = ({ onBackToLanding }) => {
+export const WeatherApp: React.FC = () => {
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [isOverlayOpen, setIsOverlayOpen] = useState<boolean>(false);
@@ -45,63 +41,16 @@ export const WeatherApp: React.FC<WeatherAppProps> = ({ onBackToLanding }) => {
     <div style={{ position: 'relative', minHeight: '100vh', background: '#0d1520' }}>
       <div id="wxBg" />
 
-      {/* Optional Top Nav Bar for App Shell */}
-      {onBackToLanding && (
-        <div
-          style={{
-            position: 'sticky',
-            top: 0,
-            zIndex: 5,
-            background: 'rgba(7, 12, 24, 0.85)',
-            backdropFilter: 'blur(8px)',
-            borderBottom: '1px solid rgba(91,164,207,0.18)',
-            padding: '10px 16px',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            fontSize: '13px'
-          }}
-        >
-          <button
-            onClick={onBackToLanding}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: '#5BA4CF',
-              cursor: 'pointer',
-              fontWeight: 600,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px'
-            }}
-          >
-            ← SkyWatch Website
-          </button>
-          <button
-            onClick={() => setIsOverlayOpen(true)}
-            style={{
-              background: 'rgba(91,164,207,0.15)',
-              border: '1px solid rgba(91,164,207,0.3)',
-              color: '#EDF2FA',
-              borderRadius: '6px',
-              padding: '4px 10px',
-              fontSize: '12px',
-              cursor: 'pointer'
-            }}
-          >
-            🔒 Stealth Mode
-          </button>
-        </div>
-      )}
-
       <div id="app">
         <div id="weather" {...weatherAreaProps}>
           {loading ? (
             <div className="wx-top" style={{ paddingTop: '60px' }}>
-              <div className="wx-city">Loading Weather…</div>
-              <div className="wx-temp" style={{ fontSize: '48px', marginTop: '20px' }}>
-                --°
+              <div className="wx-city">Sullivan</div>
+              <div className="wx-icon-el">🌤️</div>
+              <div className="wx-temp" style={{ fontSize: '88px' }}>
+                76°
               </div>
+              <div className="wx-cond">Mostly Sunny</div>
             </div>
           ) : weather ? (
             <>
@@ -113,7 +62,6 @@ export const WeatherApp: React.FC<WeatherAppProps> = ({ onBackToLanding }) => {
                   className="wx-icon-el"
                   id="wxIconEl"
                   {...iconHoldProps}
-                  title="Hold for 2s or tap 5x on temperature to unlock"
                 >
                   {weather.icon}
                 </div>
@@ -121,7 +69,6 @@ export const WeatherApp: React.FC<WeatherAppProps> = ({ onBackToLanding }) => {
                   className="wx-temp"
                   id="wxTemp"
                   onClick={handleTempClick}
-                  title="Tap 5 times quickly"
                 >
                   {weather.temp}
                 </div>

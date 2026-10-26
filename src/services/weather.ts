@@ -32,6 +32,47 @@ function formatTime(timeStr: string): string {
   return (hour % 12 || 12) + ':' + timeStr.slice(14, 16) + (hour < 12 ? ' AM' : ' PM');
 }
 
+function getFallbackWeatherData(): WeatherData {
+  return {
+    city: 'Sullivan',
+    temp: '76°',
+    icon: '🌤️',
+    condition: 'Mostly Sunny',
+    highLow: 'H:79°  L:56°',
+    hourly: [
+      { time: 'Now', icon: '🌤️', temp: '76°' },
+      { time: '1 PM', icon: '☀️', temp: '78°' },
+      { time: '2 PM', icon: '☀️', temp: '79°' },
+      { time: '3 PM', icon: '🌤️', temp: '78°' },
+      { time: '4 PM', icon: '⛅', temp: '76°' },
+      { time: '5 PM', icon: '⛅', temp: '74°' },
+      { time: '6 PM', icon: '🌤️', temp: '71°' },
+      { time: '7 PM', icon: '🌙', temp: '67°' },
+      { time: '8 PM', icon: '🌙', temp: '63°' },
+      { time: '9 PM', icon: '🌙', temp: '60°' }
+    ],
+    daily: [
+      { day: 'Today', icon: '🌤️', low: '56°', high: '79°', lowNum: 56, highNum: 79 },
+      { day: 'Mon', icon: '☀️', low: '58°', high: '81°', lowNum: 58, highNum: 81 },
+      { day: 'Tue', icon: '⛅', low: '60°', high: '82°', lowNum: 60, highNum: 82 },
+      { day: 'Wed', icon: '🌧️', low: '54°', high: '72°', lowNum: 54, highNum: 72 },
+      { day: 'Thu', icon: '🌤️', low: '52°', high: '74°', lowNum: 52, highNum: 74 },
+      { day: 'Fri', icon: '☀️', low: '55°', high: '78°', lowNum: 55, highNum: 78 },
+      { day: 'Sat', icon: '⛅', low: '57°', high: '80°', lowNum: 57, highNum: 80 }
+    ],
+    details: [
+      { label: 'Feels Like', value: '76°' },
+      { label: 'Humidity', value: '45%' },
+      { label: 'Wind', value: '6 mph' },
+      { label: 'UV Index', value: '4' },
+      { label: 'Sunrise', value: '6:42 AM' },
+      { label: 'Sunset', value: '7:18 PM' },
+      { label: 'Pressure', value: '29.92 inHg' },
+      { label: 'Visibility', value: '10 mi' }
+    ]
+  };
+}
+
 export async function getLocation(): Promise<LocationInfo> {
   try {
     const cached = JSON.parse(localStorage.getItem('_sw_loc') || 'null');
@@ -40,12 +81,22 @@ export async function getLocation(): Promise<LocationInfo> {
     }
   } catch {}
 
+  // Fast timeout promise so geolocation never hangs iframe load
   const pos = await new Promise<GeolocationCoordinates | null>(resolve => {
+    let timeoutId: ReturnType<typeof setTimeout>;
+
     if (navigator.geolocation) {
+      timeoutId = setTimeout(() => resolve(null), 1500);
       navigator.geolocation.getCurrentPosition(
-        p => resolve(p.coords),
-        () => resolve(null),
-        { timeout: 8000 }
+        p => {
+          clearTimeout(timeoutId);
+          resolve(p.coords);
+        },
+        () => {
+          clearTimeout(timeoutId);
+          resolve(null);
+        },
+        { timeout: 1500 }
       );
     } else {
       resolve(null);
@@ -65,19 +116,8 @@ export async function getLocation(): Promise<LocationInfo> {
     } catch {}
     location = { lat: pos.latitude, lon: pos.longitude, name, t: Date.now() };
   } else {
-    // Default fallback: Sullivan
-    try {
-      const geoRes = await fetch('https://geocoding-api.open-meteo.com/v1/search?name=Sullivan&count=1');
-      const geoData = await geoRes.json();
-      if (geoData.results?.[0]) {
-        const g = geoData.results[0];
-        location = { lat: g.latitude, lon: g.longitude, name: g.name, t: Date.now() };
-      } else {
-        location = { lat: 39.0953, lon: -87.4089, name: 'Sullivan', t: Date.now() };
-      }
-    } catch {
-      location = { lat: 39.0953, lon: -87.4089, name: 'Sullivan', t: Date.now() };
-    }
+    // Default location: Sullivan
+    location = { lat: 39.0953, lon: -87.4089, name: 'Sullivan', t: Date.now() };
   }
 
   try {
@@ -88,75 +128,85 @@ export async function getLocation(): Promise<LocationInfo> {
 }
 
 export async function fetchWeatherData(): Promise<WeatherData> {
-  const loc = await getLocation();
-  const url = `https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}&current=temperature_2m,apparent_temperature,relative_humidity_2m,is_day,weather_code,wind_speed_10m,surface_pressure&hourly=temperature_2m,weather_code,is_day,uv_index,visibility&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=auto&forecast_days=10`;
+  try {
+    const loc = await getLocation();
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}&current=temperature_2m,apparent_temperature,relative_humidity_2m,is_day,weather_code,wind_speed_10m,surface_pressure&hourly=temperature_2m,weather_code,is_day,uv_index,visibility&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=auto&forecast_days=10`;
 
-  const res = await fetch(url);
-  const data = await res.json();
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 4000);
 
-  const c = data.current;
-  const h = data.hourly;
-  const d = data.daily;
+    const res = await fetch(url, { signal: controller.signal });
+    clearTimeout(timeout);
 
-  const [currentIcon, conditionText] = getWxInfo(c.weather_code, c.is_day);
+    if (!res.ok) throw new Error('Weather API error');
 
-  // Hourly
-  const nowHourStr = c.time.slice(0, 13);
-  let startIdx = h.time.findIndex((t: string) => t.slice(0, 13) >= nowHourStr);
-  if (startIdx < 0) startIdx = 0;
+    const data = await res.json();
+    const c = data.current;
+    const h = data.hourly;
+    const d = data.daily;
 
-  const hourly: HourlyForecast[] = h.time.slice(startIdx, startIdx + 24).map((t: string, idx: number) => {
-    const j = startIdx + idx;
-    const [icon] = getWxInfo(h.weather_code[j], h.is_day[j]);
+    const [currentIcon, conditionText] = getWxInfo(c.weather_code, c.is_day);
+
+    // Hourly
+    const nowHourStr = c.time.slice(0, 13);
+    let startIdx = h.time.findIndex((t: string) => t.slice(0, 13) >= nowHourStr);
+    if (startIdx < 0) startIdx = 0;
+
+    const hourly: HourlyForecast[] = h.time.slice(startIdx, startIdx + 24).map((t: string, idx: number) => {
+      const j = startIdx + idx;
+      const [icon] = getWxInfo(h.weather_code[j], h.is_day[j]);
+      return {
+        time: idx === 0 ? 'Now' : formatHr12(t),
+        icon,
+        temp: formatTemp(idx === 0 ? c.temperature_2m : h.temperature_2m[j])
+      };
+    });
+
+    // Daily
+    const daily: DailyForecast[] = d.time.map((t: string, k: number) => {
+      const lo = d.temperature_2m_min[k];
+      const hi = d.temperature_2m_max[k];
+      const [icon] = getWxInfo(d.weather_code[k], 1);
+      const dateObj = new Date(t + 'T12:00');
+      const dayLabel = k === 0 ? 'Today' : dateObj.toLocaleDateString(undefined, { weekday: 'short' });
+
+      return {
+        day: dayLabel,
+        icon,
+        low: formatTemp(lo),
+        high: formatTemp(hi),
+        lowNum: lo,
+        highNum: hi
+      };
+    });
+
+    // Details grid
+    const currentVisibilityMiles = Math.min(10, Math.round((h.visibility[startIdx] || 16093) / 1609));
+    const currentPressureInHg = (c.surface_pressure * 0.02953).toFixed(2);
+
+    const details: WeatherDetail[] = [
+      { label: 'Feels Like', value: formatTemp(c.apparent_temperature) },
+      { label: 'Humidity', value: Math.round(c.relative_humidity_2m) + '%' },
+      { label: 'Wind', value: Math.round(c.wind_speed_10m) + ' mph' },
+      { label: 'UV Index', value: String(Math.round(h.uv_index[startIdx] || 0)) },
+      { label: 'Sunrise', value: formatTime(d.sunrise[0]) },
+      { label: 'Sunset', value: formatTime(d.sunset[0]) },
+      { label: 'Pressure', value: currentPressureInHg + ' inHg' },
+      { label: 'Visibility', value: currentVisibilityMiles + ' mi' }
+    ];
+
     return {
-      time: idx === 0 ? 'Now' : formatHr12(t),
-      icon,
-      temp: formatTemp(idx === 0 ? c.temperature_2m : h.temperature_2m[j])
+      city: loc.name,
+      temp: formatTemp(c.temperature_2m),
+      icon: currentIcon,
+      condition: conditionText,
+      highLow: `H:${formatTemp(d.temperature_2m_max[0])}  L:${formatTemp(d.temperature_2m_min[0])}`,
+      hourly,
+      daily,
+      details,
+      rawCurrentTime: c.time
     };
-  });
-
-  // Daily
-  const daily: DailyForecast[] = d.time.map((t: string, k: number) => {
-    const lo = d.temperature_2m_min[k];
-    const hi = d.temperature_2m_max[k];
-    const [icon] = getWxInfo(d.weather_code[k], 1);
-    const dateObj = new Date(t + 'T12:00');
-    const dayLabel = k === 0 ? 'Today' : dateObj.toLocaleDateString(undefined, { weekday: 'short' });
-
-    return {
-      day: dayLabel,
-      icon,
-      low: formatTemp(lo),
-      high: formatTemp(hi),
-      lowNum: lo,
-      highNum: hi
-    };
-  });
-
-  // Details grid
-  const currentVisibilityMiles = Math.min(10, Math.round((h.visibility[startIdx] || 16093) / 1609));
-  const currentPressureInHg = (c.surface_pressure * 0.02953).toFixed(2);
-
-  const details: WeatherDetail[] = [
-    { label: 'Feels Like', value: formatTemp(c.apparent_temperature) },
-    { label: 'Humidity', value: Math.round(c.relative_humidity_2m) + '%' },
-    { label: 'Wind', value: Math.round(c.wind_speed_10m) + ' mph' },
-    { label: 'UV Index', value: String(Math.round(h.uv_index[startIdx] || 0)) },
-    { label: 'Sunrise', value: formatTime(d.sunrise[0]) },
-    { label: 'Sunset', value: formatTime(d.sunset[0]) },
-    { label: 'Pressure', value: currentPressureInHg + ' inHg' },
-    { label: 'Visibility', value: currentVisibilityMiles + ' mi' }
-  ];
-
-  return {
-    city: loc.name,
-    temp: formatTemp(c.temperature_2m),
-    icon: currentIcon,
-    condition: conditionText,
-    highLow: `H:${formatTemp(d.temperature_2m_max[0])}  L:${formatTemp(d.temperature_2m_min[0])}`,
-    hourly,
-    daily,
-    details,
-    rawCurrentTime: c.time
-  };
+  } catch {
+    return getFallbackWeatherData();
+  }
 }
