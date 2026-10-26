@@ -225,7 +225,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenApp }) => {
       </section>
 
       {/* FAQ Section */}
-      <section style={{ maxWidth: '680px', margin: '0 auto', padding: '40px 24px 80px' }}>
+      <section style={{ maxWidth: '680px', margin: '0 auto', padding: '40px 24px 60px' }}>
         <h2 style={{ textAlign: 'center', fontSize: '26px', marginBottom: '28px' }}>
           Frequently Asked Questions
         </h2>
@@ -268,6 +268,28 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenApp }) => {
           </button>
         </div>
       </section>
+
+      {/* Legal & Privacy Footer */}
+      <footer
+        style={{
+          borderTop: '1px solid var(--border)',
+          padding: '32px 24px',
+          textAlign: 'center',
+          fontSize: '13px',
+          color: 'var(--muted)'
+        }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', marginBottom: '12px' }}>
+          <a href="./privacy.html" style={{ color: 'var(--ice)', textDecoration: 'none' }}>
+            Privacy Policy
+          </a>
+          <span>•</span>
+          <a href="./terms.html" style={{ color: 'var(--ice)', textDecoration: 'none' }}>
+            Terms of Service
+          </a>
+        </div>
+        <p>© 2026 SkyWatch. Zero Logs. Zero Metadata. Client-Side AES-256-GCM Cryptography.</p>
+      </footer>
     </div>
   );
 };

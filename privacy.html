@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy Policy — SkyWatch</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #070C18;
+      color: #EDF2FA;
+      font-family: 'Space Grotesk', system-ui, sans-serif;
+      line-height: 1.7;
+      padding: 40px 24px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    a { color: #5BA4CF; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    h1 { font-size: 32px; margin-bottom: 8px; color: #EDF2FA; }
+    .subtitle { color: #6B83A3; font-size: 14px; margin-bottom: 36px; }
+    h2 { font-size: 20px; color: #5BA4CF; margin: 28px 0 12px; }
+    p, li { color: #A5B5CC; font-size: 15px; margin-bottom: 12px; }
+    ul { padding-left: 20px; }
+    .card {
+      background: #0D1526;
+      border: 1px solid rgba(91,164,207,.18);
+      border-radius: 12px;
+      padding: 24px;
+      margin: 24px 0;
+    }
+    .back-btn {
+      display: inline-block;
+      margin-bottom: 24px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <a href="./index.html" className="back-btn">← Back to SkyWatch</a>
+  <h1>Privacy Policy</h1>
+  <div className="subtitle">Last Updated: October 26, 2026</div>
+
+  <div className="card">
+    <p><strong>SkyWatch</strong> is built from the ground up with a strict <strong>Zero Digital Footprint & Zero Knowledge Privacy Architecture</strong>. Your privacy and security are completely protected by mathematical encryption.</p>
+  </div>
+
+  <h2>1. Zero Log & Zero Knowledge Guarantee</h2>
+  <p>We do not collect, store, track, or log any personal information, phone numbers, email addresses, IP addresses, or device identifiers. We have no user registration databases, no telemetry, and no tracking scripts.</p>
+
+  <h2>2. Client-Side End-to-End Encryption</h2>
+  <p>All private messages are encrypted directly on your local device using 256-bit AES-GCM with PBKDF2 key derivation (100,000 iterations) prior to transmission. Unencrypted plain text never leaves your device and is never readable by server operators, third parties, or internet service providers.</p>
+
+  <h2>3. Local Data Storage</h2>
+  <p>Your PIN codes, decoy photos, and secret phrase room settings are hashed or stored exclusively in your local web browser storage (<code>localStorage</code>). This data remains on your physical device and can be cleared at any time by clearing your browser cache or pressing <strong>Clear Chat</strong> inside the app.</p>
+
+  <h2>4. Location & Weather Forecast Data</h2>
+  <p>To display weather forecast information, SkyWatch queries public weather APIs (Open-Meteo). Approximate location coordinates (latitude and longitude) are processed locally on your device or defaulted to Sullivan. Location coordinates are never linked to your identity or stored on remote servers.</p>
+
+  <h2>5. Third-Party Services</h2>
+  <p>Encrypted message payloads (containing only unreadable ciphertext and random initialization vectors) are relayed through Firebase Realtime Database and local sync broadcast channels for real-time delivery. Firebase cannot decrypt your messages as the encryption keys exist only on your device.</p>
+
+  <h2>6. Contact & Inquiries</h2>
+  <p>Because SkyWatch operates on a zero-knowledge architecture, we do not hold user accounts or personal records. For questions regarding source code and technical implementation, refer to the open project documentation.</p>
+</body>
+</html>
